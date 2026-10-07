@@ -16,18 +16,28 @@ st.set_page_config(
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
 
 client = None
+modelli_disponibili = []
+
 if GROQ_API_KEY:
     try:
         client = Groq(api_key=GROQ_API_KEY)
-    except Exception:
+        # Recupera in tempo reale tutti i modelli attivi sul tuo account Groq
+        response = client.models.list()
+        
+        # Filtra i modelli escludendo quelli di test, arabi o di trascrizione audio (whisper)
+        tutti_modelli = [m.id for m in response.data]
+        modelli_disponibili = [
+            m for m in tutti_modelli 
+            if not any(banned in m.lower() for banned in ["whisper", "guard", "orpheus", "safetensors", "preview"])
+        ]
+        # Ordina per mettere in alto i modelli Llama
+        modelli_disponibili.sort(key=lambda x: ("llama" in x.lower(), x), reverse=True)
+    except Exception as e:
         pass
 
-# Modelli stabili e sempre disponibili
-MODELLI_TOP = [
-    "llama-3.1-8b-instant",    # ⚡ Velocissimo e sempre disponibile
-    "llama3-70b-8192",         # 🧠 Alternativa 70B stabile
-    "mixtral-8x7b-32768"       # 📚 Alternativa Mixtral
-]
+# Fallback se il recupero dinamico non restituisce nulla
+if not modelli_disponibili:
+    modelli_disponibili = ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]
 
 # ---------------------------------------------------------
 # STILE GRAFICO (CSS)
@@ -76,13 +86,13 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown("**⚙️ Motore IA Selezionato**")
+    st.markdown("**⚙️ Motore IA Rilevato**")
     
     modello_selezionato = st.selectbox(
-        "Scegli il modello IA:",
-        options=MODELLI_TOP,
+        "Modello Groq attivo:",
+        options=modelli_disponibili,
         index=0,
-        help="llama-3.1-8b-instant è il motore più rapido e affidabile."
+        help="Elenco dei modelli rilevati direttamente dal tuo account Groq."
     )
 
     st.markdown("---")
@@ -167,17 +177,3 @@ In questa fase limitati all'analisi tecnica e alle possibili strategie di miglio
         st.markdown('<div class="info-card"><h4>📄 Analisi intelligente</h4><p>Estrai i requisiti, i vincoli e le criticità della voce con l\'AI.</p></div>', unsafe_allow_html=True)
     with c2:
         st.markdown('<div class="info-card"><h4>💡 Migliorie su misura</h4><p>Proposte concrete per sostenibilità, prestazioni e rapporto qualità/prezzo.</p></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown('<div class="info-card"><h4>📦 Prodotti e soluzioni</h4><p>Scopri soluzioni tecniche compatibili con i requisiti di gara e i CAM.</p></div>', unsafe_allow_html=True)
-    with c4:
-        st.markdown('<div class="info-card"><h4>⭐ Confronta e scegli</h4><p>Metti a confronto le opzioni per individuare la soluzione vincente.</p></div>', unsafe_allow_html=True)
-
-else:
-    st.info(f"Sezione **{menu}** in fase di sviluppo.")
-
-st.markdown("---")
-footer_col1, footer_col2 = st.columns([4, 1])
-with footer_col1:
-    st.caption("MigliorIA | AI per gare d'appalto")
-with footer_col2:
-    st.markdown('<span class="system-status">🟢 Sistema attivo (Cloud API)</span>', unsafe_allow_html=True)
