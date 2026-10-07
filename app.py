@@ -13,22 +13,21 @@ st.set_page_config(
 )
 
 # 🔑 RECUPERO SICURO API KEY
-# Legge la chiave dai Secrets di Streamlit Cloud (senza esporla su GitHub)
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
 
 client = None
-modelli_disponibili = []
-
 if GROQ_API_KEY:
     try:
         client = Groq(api_key=GROQ_API_KEY)
-        response_models = client.models.list()
-        modelli_disponibili = [m.id for m in response_models.data]
-    except Exception as e:
+    except Exception:
         pass
 
-if not modelli_disponibili:
-    modelli_disponibili = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+# Lista modelli ordinata per QUALITÀ (dal più intelligente al più veloce)
+MODELLI_TOP = [
+    "llama-3.3-70b-versatile", # 🏆 Il miglior motore in assoluto (70B)
+    "llama-3.1-8b-instant",    # ⚡ Velocissimo per test rapidi
+    "mixtral-8x7b-32768"       # 🧠 Ottimo per testi lunghi
+]
 
 # ---------------------------------------------------------
 # STILE GRAFICO (CSS)
@@ -77,16 +76,17 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown("**⚙️ Configurazione IA**")
+    st.markdown("**⚙️ Motore IA Selezionato**")
     
     modello_selezionato = st.selectbox(
-        "Modello Groq attivo:",
-        options=modelli_disponibili,
-        index=0
+        "Scegli il livello di IA:",
+        options=MODELLI_TOP,
+        index=0, # Imposta Llama-3.3-70B di default
+        help="Llama-3.3-70B offre l'analisi più approfondita e precisa."
     )
 
     st.markdown("---")
-    st.caption("MigliorIA | Cloud Engine")
+    st.caption("MigliorIA | Powered by Groq Cloud")
 
 # ---------------------------------------------------------
 # HEADER
@@ -121,7 +121,7 @@ if menu == "📄 Analisi capitolato":
 
     if analizza_clicked:
         if not client:
-            st.error("⚠️ API Key di Groq non configurata. Inseriscila nei Secrets su Streamlit Cloud.")
+            st.error("⚠️ API Key di Groq non configurata nei Secrets di Streamlit.")
         elif voce.strip():
             prompt = f"""
 Sei un esperto di capitolati tecnici e gare d'appalto nel settore delle costruzioni.
@@ -139,7 +139,7 @@ Individua:
 NON inventare prodotti o caratteristiche specifiche di prodotti reali.
 In questa fase limitati all'analisi tecnica e alle possibili strategie di miglioramento.
 """
-            with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
+            with st.spinner(f"Analisi ad alta precisione in corso con {modello_selezionato}..."):
                 try:
                     chat_completion = client.chat.completions.create(
                         messages=[{"role": "user", "content": prompt}],
@@ -156,7 +156,8 @@ In questa fase limitati all'analisi tecnica e alle possibili strategie di miglio
                         st.markdown(risposta)
 
                 except Exception as e:
-                    st.error(f"Errore nella chiamata API Groq: {e}")
+                    st.error(f"Errore durante l'analisi con {modello_selezionato}: {e}")
+                    st.info("💡 Suggerimento: prova a selezionare 'llama-3.1-8b-instant' dalla sidebar a sinistra.")
         else:
             st.warning("Inserisci prima una voce di capitolato.")
 
