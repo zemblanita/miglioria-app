@@ -42,40 +42,57 @@ if not modelli_disponibili:
     modelli_disponibili = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
 # ---------------------------------------------------------
-# CSS PER REPLICARE FEDELMENTE IL MOCK-UP
+# CSS PER REPLICARE IL MOCK-UP CON SCARITTE BIANCHE E LOGO MINIMAL
 # ---------------------------------------------------------
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fondo chiaro e pulito */
+    /* Fondo chiaro generale */
     .stApp {
         background-color: #f3f4f6;
-        color: #1f2937;
+        color: #111827;
     }
 
-    /* Sidebar scura blu profondo */
+    /* SIDEBAR SCURA CON TESTO BIANCO AD ALTO CONTRASTO */
     [data-testid="stSidebar"] {
         background-color: #0b1329 !important;
-        padding-top: 20px;
+        padding-top: 24px;
     }
+    
+    /* Tutti gli elementi di testo della sidebar in BIANCO */
     [data-testid="stSidebar"] * {
-        color: #9ca3af !important;
+        color: #ffffff !important;
     }
 
-    /* Stile radio button della sidebar */
     [data-testid="stSidebar"] .stRadio label {
         font-size: 14px !important;
-        padding: 10px 12px !important;
-        border-radius: 8px !important;
-        margin-bottom: 4px !important;
+        font-weight: 500 !important;
+        padding: 8px 10px !important;
+        color: #ffffff !important;
     }
 
-    /* Titoli Header */
+    /* Logo Minimal "M" Blu */
+    .brand-logo-m {
+        background-color: #2563eb;
+        color: #ffffff !important;
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 20px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        letter-spacing: -0.5px;
+    }
+
+    /* HEADER */
     .welcome-text {
         font-size: 11px;
         font-weight: 700;
@@ -103,16 +120,7 @@ st.markdown("""
         margin-bottom: 24px;
     }
 
-    /* Card Principale dell'Input */
-    .input-card {
-        background-color: #ffffff;
-        border-radius: 16px;
-        padding: 24px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        margin-bottom: 24px;
-    }
-
+    /* CARD PRINCIPALE INPUT */
     .input-card-header {
         font-size: 18px;
         font-weight: 700;
@@ -129,7 +137,7 @@ st.markdown("""
         margin-bottom: 16px;
     }
 
-    /* Text Area personalizzata grigio chiaro */
+    /* Text Area */
     .stTextArea textarea {
         background-color: #f9fafb !important;
         border: 1px solid #e5e7eb !important;
@@ -142,7 +150,7 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
     }
 
-    /* Pulsante Blu con angoli smussati */
+    /* Pulsante Blu */
     div.stButton > button {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -158,7 +166,7 @@ st.markdown("""
         background-color: #1d4ed8 !important;
     }
 
-    /* 4 Cards Informative in Basso */
+    /* CARDS IN BASSO */
     .info-card {
         background-color: #ffffff;
         border-radius: 14px;
@@ -201,200 +209,4 @@ st.markdown("""
 
     .card-arrow {
         font-size: 16px;
-        color: #9ca3af;
-    }
-
-    /* Footer con indicatore stato verde */
-    .footer-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 30px;
-        padding-top: 16px;
-        border-top: 1px solid #e5e7eb;
-        font-size: 12px;
-        color: #9ca3af;
-    }
-    .status-dot {
-        height: 8px;
-        width: 8px;
-        background-color: #10b981;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 6px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# SIDEBAR
-# ---------------------------------------------------------
-with st.sidebar:
-    st.markdown("""
-        <div style='display: flex; align-items: center; gap: 10px; margin-bottom: 30px;'>
-            <div style='background: #2563eb; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;'>M</div>
-            <span style='font-size: 20px; font-weight: 800; color: white;'>Miglior<span style='color: #3b82f6;'>IA</span></span>
-        </div>
-    """, unsafe_allow_html=True)
-
-    menu = st.radio(
-        "MENU",
-        [
-            "📄 Analisi capitolato", 
-            "⏱️ Cronologia", 
-            "📁 File salvati", 
-            "⚖️ Confronta le migliorie"
-        ],
-        label_visibility="collapsed"
-    )
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #6b7280;'>CONFIGURAZIONE ENGINE</p>", unsafe_allow_html=True)
-    
-    modello_selezionato = st.selectbox(
-        "Modello Groq:",
-        options=modelli_disponibili,
-        index=0,
-        label_visibility="collapsed"
-    )
-
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown("""
-        <div style='font-size: 12px; color: #6b7280;'>
-            <strong>MigliorIA</strong><br>
-            Più valore alle tue gare.
-        </div>
-    """, unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# MAIN CONTENT
-# ---------------------------------------------------------
-if menu == "📄 Analisi capitolato":
-
-    # Header principale
-    st.markdown("<div class='welcome-text'>BENVENUTO SU</div>", unsafe_allow_html=True)
-    st.markdown("<div class='main-title'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
-    st.markdown("<div class='main-subtitle'>L'intelligenza artificiale al servizio delle tue gare d'appalto. Analizza, migliora, ottimizza.</div>", unsafe_allow_html=True)
-
-    # Card principale Voce di Capitolato
-    with st.container():
-        st.markdown("""
-            <div class='input-card-header'>📄 Voce di capitolato</div>
-            <div class='input-card-desc'>Incolla qui la voce di capitolato da analizzare.</div>
-        """, unsafe_allow_html=True)
-
-        voce = st.text_area(
-            "Voce di capitolato input",
-            height=160,
-            placeholder='Esempio: "Fornitura e posa di unità di climatizzazione con caratteristiche..."',
-            label_visibility="collapsed"
-        )
-
-        col_char, col_btn = st.columns([2, 1])
-        with col_char:
-            st.caption(f"{len(voce)}/10000")
-        with col_btn:
-            analizza_clicked = st.button("✨ ANALIZZA VOCE", use_container_width=True)
-
-    # Risultato Analisi AI
-    if analizza_clicked:
-        if not client:
-            st.error("⚠️ API Key di Groq non trovata nei Secrets.")
-        elif voce.strip():
-            prompt = f"""
-Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni.
-
-Analizza la seguente voce di capitolato:
-{voce}
-
-Fornisci una risposta chiara, professionale e ben strutturata in Markdown:
-### 🔍 Requisiti e Prestazioni Principali
-### ⚠️ Criticità e Vincoli di Gara
-### 💡 Proposte di Miglioria Tecnico-Economica (almeno 5 punti)
-### 📦 Prodotti e Soluzioni Consigliate (con suggerimenti sui marchi/tipologie)
-### 🌱 Conformità CAM (Criteri Ambientali Minimi)
-"""
-            with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
-                try:
-                    chat_completion = client.chat.completions.create(
-                        messages=[{"role": "user", "content": prompt}],
-                        model=modello_selezionato,
-                        temperature=0.2,
-                        max_tokens=1000
-                    )
-                    risposta = chat_completion.choices[0].message.content
-
-                    st.success("Analisi completata con successo!")
-                    
-                    with st.container():
-                        st.markdown("### 📊 Risultato dell'Analisi Tecnica")
-                        st.markdown(risposta)
-
-                except Exception as e:
-                    st.error(f"Errore durante l'elaborazione API: {e}")
-        else:
-            st.warning("Inserisci una voce di capitolato per procedere.")
-
-    st.write("")
-
-    # 4 Cards Informative
-    c1, c2, c3, c4 = st.columns(4)
-    
-    with c1:
-        st.markdown("""
-            <div class='info-card'>
-                <div>
-                    <div class='icon-badge badge-blue'>📄</div>
-                    <h4>Analisi intelligente</h4>
-                    <p>Estrai i requisiti, i vincoli e le criticità della voce di capitolato con l'AI.</p>
-                </div>
-                <div class='card-arrow'>→</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with c2:
-        st.markdown("""
-            <div class='info-card'>
-                <div>
-                    <div class='icon-badge badge-green'>💡</div>
-                    <h4>Migliorie su misura</h4>
-                    <p>Ottieni proposte concrete per migliorare le prestazioni, la sostenibilità e il rapporto qualità/prezzo.</p>
-                </div>
-                <div class='card-arrow'>→</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with c3:
-        st.markdown("""
-            <div class='info-card'>
-                <div>
-                    <div class='icon-badge badge-purple'>📦</div>
-                    <h4>Prodotti e soluzioni</h4>
-                    <p>Scopri soluzioni tecniche e prodotti compatibili con i requisiti di gara e i CAM.</p>
-                </div>
-                <div class='card-arrow'>→</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with c4:
-        st.markdown("""
-            <div class='info-card'>
-                <div>
-                    <div class='icon-badge badge-orange'>⭐</div>
-                    <h4>Confronta e scegli</h4>
-                    <p>Metti a confronto le migliorie proposte per individuare la soluzione migliore.</p>
-                </div>
-                <div class='card-arrow'>→</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-else:
-    st.info(f"Sezione **{menu}** in fase di sviluppo.")
-
-# Footer
-st.markdown("""
-    <div class='footer-container'>
-        <div>MigliorIA | AI per gare d'appalto</div>
-        <div><span class='status-dot'></span>Sistema attivo</div>
-    </div>
-""", unsafe_allow_html=True)
+        color: #9ca3af
