@@ -41,8 +41,12 @@ if GROQ_API_KEY:
 if not modelli_disponibili:
     modelli_disponibili = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
+# Inizializzazione Session State per salvare l'ultimo risultato
+if "ultimo_risultato" not in st.session_state:
+    st.session_state.ultimo_risultato = None
+
 # ---------------------------------------------------------
-# LOGO SVG VETTORIALE (STILE MINIMAL FOTO)
+# LOGO SVG VETTORIALE (MINIMAL M)
 # ---------------------------------------------------------
 SVG_LOGO_SIDEBAR = """
 <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -62,13 +66,11 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Fondo chiaro generale */
     .stApp {
         background-color: #f3f4f6;
         color: #111827;
     }
 
-    /* SIDEBAR SCURA CON TESTO BIANCO AD ALTO CONTRASTO */
     [data-testid="stSidebar"] {
         background-color: #0b1329 !important;
         padding-top: 24px;
@@ -85,7 +87,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* HEADER */
     .welcome-text {
         font-size: 11px;
         font-weight: 700;
@@ -113,7 +114,6 @@ st.markdown("""
         margin-bottom: 24px;
     }
 
-    /* CARD PRINCIPALE INPUT */
     .input-card-header {
         font-size: 18px;
         font-weight: 700;
@@ -130,7 +130,6 @@ st.markdown("""
         margin-bottom: 16px;
     }
 
-    /* Text Area */
     .stTextArea textarea {
         background-color: #f9fafb !important;
         border: 1px solid #e5e7eb !important;
@@ -143,7 +142,6 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
     }
 
-    /* Pulsante Blu */
     div.stButton > button {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -159,7 +157,17 @@ st.markdown("""
         background-color: #1d4ed8 !important;
     }
 
-    /* CARDS IN BASSO */
+    /* Container Risultato */
+    .result-container {
+        background-color: #ffffff;
+        border-radius: 16px;
+        padding: 28px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        margin-top: 20px;
+        margin-bottom: 30px;
+    }
+
     .info-card {
         background-color: #ffffff;
         border-radius: 14px;
@@ -205,7 +213,6 @@ st.markdown("""
         color: #9ca3af;
     }
 
-    /* FOOTER */
     .footer-container {
         display: flex;
         justify-content: space-between;
@@ -298,7 +305,7 @@ if menu == "📄 Analisi capitolato":
         with col_btn:
             analizza_clicked = st.button("✨ ANALIZZA VOCE", use_container_width=True)
 
-    # Risultato Analisi AI
+    # Logica di Elaborazione
     if analizza_clicked:
         if not client:
             st.error("⚠️ API Key di Groq non trovata nei Secrets.")
@@ -313,7 +320,7 @@ Fornisci una risposta chiara, professionale e ben strutturata in Markdown:
 ### 🔍 Requisiti e Prestazioni Principali
 ### ⚠️ Criticità e Vincoli di Gara
 ### 💡 Proposte di Miglioria Tecnico-Economica (almeno 5 punti)
-### 📦 Prodotti e Soluzioni Consigliate (con suggerimenti sui marchi/tipologie)
+### 📦 Prodotti e Soluzioni Consigliate (con suggerimenti sui marchi/tipologie e link di ricerca)
 ### 🌱 Conformità CAM (Criteri Ambientali Minimi)
 """
             with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
@@ -324,18 +331,20 @@ Fornisci una risposta chiara, professionale e ben strutturata in Markdown:
                         temperature=0.2,
                         max_tokens=1000
                     )
-                    risposta = chat_completion.choices[0].message.content
-
-                    st.success("Analisi completata con successo!")
-                    
-                    with st.container():
-                        st.markdown("### 📊 Risultato dell'Analisi Tecnica")
-                        st.markdown(risposta)
+                    # Salviamo il risultato nella sessione
+                    st.session_state.ultimo_risultato = chat_completion.choices[0].message.content
 
                 except Exception as e:
                     st.error(f"Errore durante l'elaborazione API: {e}")
         else:
             st.warning("Inserisci una voce di capitolato per procedere.")
+
+    # MOSTRA IL RISULTATO SALVATO NELLO STATE
+    if st.session_state.ultimo_risultato:
+        st.markdown("<div class='result-container'>", unsafe_allow_html=True)
+        st.markdown("### 📊 Esito dell'Analisi Tecnica")
+        st.markdown(st.session_state.ultimo_risultato)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
@@ -371,32 +380,3 @@ Fornisci una risposta chiara, professionale e ben strutturata in Markdown:
             <div class='info-card'>
                 <div>
                     <div class='icon-badge badge-purple'>📦</div>
-                    <h4>Prodotti e soluzioni</h4>
-                    <p>Scopri soluzioni tecniche e prodotti compatibili con i requisiti di gara e i CAM.</p>
-                </div>
-                <div class='card-arrow'>→</div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with c4:
-        st.markdown("""
-            <div class='info-card'>
-                <div>
-                    <div class='icon-badge badge-orange'>⭐</div>
-                    <h4>Confronta e scegli</h4>
-                    <p>Metti a confronto le migliorie proposte per individuare la soluzione migliore.</p>
-                </div>
-                <div class='card-arrow'>→</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-else:
-    st.info(f"Sezione **{menu}** in fase di sviluppo.")
-
-# Footer
-st.markdown("""
-    <div class='footer-container'>
-        <div>MigliorIA | AI per gare d'appalto</div>
-        <div><span class='status-dot'></span>Sistema attivo</div>
-    </div>
-""", unsafe_allow_html=True)
