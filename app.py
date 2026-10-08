@@ -42,7 +42,7 @@ if not modelli_disponibili:
     modelli_disponibili = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
 # ---------------------------------------------------------
-# CSS PER REPLICARE IL MOCK-UP CON SCARITTE BIANCHE E LOGO MINIMAL
+# CSS PER REPLICARE IL MOCK-UP
 # ---------------------------------------------------------
 st.markdown("""
 <style>
@@ -186,27 +186,4 @@ st.markdown("""
         align-items: center;
         justify-content: center;
         margin-bottom: 14px;
-        font-size: 18px;
-    }
-    .badge-blue { background-color: #eff6ff; color: #2563eb; }
-    .badge-green { background-color: #f0fdf4; color: #16a34a; }
-    .badge-purple { background-color: #faf5ff; color: #9333ea; }
-    .badge-orange { background-color: #fff7ed; color: #ea580c; }
-
-    .info-card h4 {
-        font-size: 15px;
-        font-weight: 700;
-        color: #111827;
-        margin: 0 0 6px 0;
-    }
-
-    .info-card p {
-        font-size: 12px;
-        color: #6b7280;
-        margin: 0 0 16px 0;
-        line-height: 1.4;
-    }
-
-    .card-arrow {
-        font-size: 16px;
-        color: #9ca3af
+        font-size: 18px
