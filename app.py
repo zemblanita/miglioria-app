@@ -48,155 +48,93 @@ if "ultimo_risultato" not in st.session_state:
 # ---------------------------------------------------------
 # LOGO SVG VETTORIALE (MINIMAL M)
 # ---------------------------------------------------------
-SVG_LOGO_SIDEBAR = """<svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M 22 80 V 30 L 50 62 L 90 18" stroke="#3b82f6" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/><path d="M 34 80 V 42 L 50 62 L 78 42 V 80" stroke="#ffffff" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/></svg>"""
+SVG_LOGO_SIDEBAR = (
+    '<svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    '<path d="M 22 80 V 30 L 50 62 L 90 18" stroke="#3b82f6" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>'
+    '<path d="M 34 80 V 42 L 50 62 L 78 42 V 80" stroke="#ffffff" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter"/>'
+    '</svg>'
+)
 
 # ---------------------------------------------------------
-# STILE CSS REPLICATO DAL MOCKUP
+# STILE CSS REPLICATO DAL MOCKUP (STRINGHE SINGOLE SICURE)
 # ---------------------------------------------------------
-CSS_STYLE = """
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+CSS_STYLE = (
+    "<style>"
+    "@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');"
+    "html, body, [class*='css'] { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }"
+    ".stApp { background-color: #f3f4f6; color: #111827; }"
+    "[data-testid='stSidebar'] { background-color: #0b1329 !important; padding-top: 24px; }"
+    "[data-testid='stSidebar'] * { color: #ffffff !important; }"
+    "[data-testid='stSidebar'] .stRadio label { font-size: 14px !important; font-weight: 500 !important; padding: 8px 10px !important; color: #ffffff !important; }"
+    ".welcome-text { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #9ca3af; margin-bottom: 2px; text-transform: uppercase; }"
+    ".main-title { font-size: 38px; font-weight: 800; color: #111827; margin: 0; line-height: 1.1; }"
+    ".main-title span { color: #2563eb; }"
+    ".main-subtitle { font-size: 14px; color: #6b7280; margin-top: 6px; margin-bottom: 24px; }"
+    ".input-card-header { font-size: 18px; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }"
+    ".input-card-desc { font-size: 13px; color: #6b7280; margin-bottom: 16px; }"
+    ".stTextArea textarea { background-color: #f9fafb !important; border: 1px solid #e5e7eb !important; border-radius: 10px !important; color: #111827 !important; font-size: 14px !important; }"
+    ".stTextArea textarea:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; }"
+    "div.stButton > button { background-color: #2563eb !important; color: #ffffff !important; font-weight: 600 !important; font-size: 13px !important; letter-spacing: 0.5px !important; border-radius: 10px !important; padding: 10px 24px !important; border: none !important; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important; }"
+    "div.stButton > button:hover { background-color: #1d4ed8 !important; }"
+    ".result-container { background-color: #ffffff; border-radius: 16px; padding: 28px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-top: 20px; margin-bottom: 30px; }"
+    ".info-card { background-color: #ffffff; border-radius: 14px; padding: 20px; border: 1px solid #e5e7eb; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }"
+    ".icon-badge { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 18px; }"
+    ".badge-blue { background-color: #eff6ff; color: #2563eb; }"
+    ".badge-green { background-color: #f0fdf4; color: #16a34a; }"
+    ".badge-purple { background-color: #faf5ff; color: #9333ea; }"
+    ".badge-orange { background-color: #fff7ed; color: #ea580c; }"
+    ".info-card h4 { font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 6px 0; }"
+    ".info-card p { font-size: 12px; color: #6b7280; margin: 0 0 16px 0; line-height: 1.4; }"
+    ".card-arrow { font-size: 16px; color: #9ca3af; }"
+    ".footer-container { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }"
+    ".status-dot { height: 8px; width: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; }"
+    "</style>"
+)
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
+st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
-    .stApp {
-        background-color: #f3f4f6;
-        color: #111827;
-    }
+# ---------------------------------------------------------
+# SIDEBAR
+# ---------------------------------------------------------
+with st.sidebar:
+    col_logo, col_title = st.columns([1, 4])
+    with col_logo:
+        st.markdown(SVG_LOGO_SIDEBAR, unsafe_allow_html=True)
+    with col_title:
+        st.markdown("<h2 style='margin:0; padding:0; font-size:22px; font-weight:800; color:#ffffff;'>Miglior<span style='color:#3b82f6;'>IA</span></h2>", unsafe_allow_html=True)
 
-    [data-testid="stSidebar"] {
-        background-color: #0b1329 !important;
-        padding-top: 24px;
-    }
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    menu = st.radio(
+        "MENU",
+        [
+            "📄 Analisi capitolato", 
+            "⏱️ Cronologia", 
+            "📁 File salvati", 
+            "⚖️ Confronta le migliorie"
+        ],
+        label_visibility="collapsed"
+    )
+
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;'>CONFIGURAZIONE ENGINE</p>", unsafe_allow_html=True)
     
-    [data-testid="stSidebar"] * {
-        color: #ffffff !important;
-    }
+    modello_selezionato = st.selectbox(
+        "Modello Groq:",
+        options=modelli_disponibili,
+        index=0,
+        label_visibility="collapsed"
+    )
 
-    [data-testid="stSidebar"] .stRadio label {
-        font-size: 14px !important;
-        font-weight: 500 !important;
-        padding: 8px 10px !important;
-        color: #ffffff !important;
-    }
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 12px; color: #ffffff; opacity: 0.8;'><strong style='color: #ffffff;'>MigliorIA</strong><br>Più valore alle tue gare.</div>", unsafe_allow_html=True)
 
-    .welcome-text {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        color: #9ca3af;
-        margin-bottom: 2px;
-        text-transform: uppercase;
-    }
+# ---------------------------------------------------------
+# MAIN CONTENT
+# ---------------------------------------------------------
+if menu == "📄 Analisi capitolato":
 
-    .main-title {
-        font-size: 38px;
-        font-weight: 800;
-        color: #111827;
-        margin: 0;
-        line-height: 1.1;
-    }
-    .main-title span {
-        color: #2563eb;
-    }
-
-    .main-subtitle {
-        font-size: 14px;
-        color: #6b7280;
-        margin-top: 6px;
-        margin-bottom: 24px;
-    }
-
-    .input-card-header {
-        font-size: 18px;
-        font-weight: 700;
-        color: #111827;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
-    }
-
-    .input-card-desc {
-        font-size: 13px;
-        color: #6b7280;
-        margin-bottom: 16px;
-    }
-
-    .stTextArea textarea {
-        background-color: #f9fafb !important;
-        border: 1px solid #e5e7eb !important;
-        border-radius: 10px !important;
-        color: #111827 !important;
-        font-size: 14px !important;
-    }
-    .stTextArea textarea:focus {
-        border-color: #2563eb !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
-    }
-
-    div.stButton > button {
-        background-color: #2563eb !important;
-        color: #ffffff !important;
-        font-weight: 600 !important;
-        font-size: 13px !important;
-        letter-spacing: 0.5px !important;
-        border-radius: 10px !important;
-        padding: 10px 24px !important;
-        border: none !important;
-        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
-    }
-    div.stButton > button:hover {
-        background-color: #1d4ed8 !important;
-    }
-
-    .result-container {
-        background-color: #ffffff;
-        border-radius: 16px;
-        padding: 28px;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        margin-top: 20px;
-        margin-bottom: 30px;
-    }
-
-    .info-card {
-        background-color: #ffffff;
-        border-radius: 14px;
-        padding: 20px;
-        border: 1px solid #e5e7eb;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .icon-badge {
-        width: 36px;
-        height: 36px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 14px;
-        font-size: 18px;
-    }
-    .badge-blue { background-color: #eff6ff; color: #2563eb; }
-    .badge-green { background-color: #f0fdf4; color: #16a34a; }
-    .badge-purple { background-color: #faf5ff; color: #9333ea; }
-    .badge-orange { background-color: #fff7ed; color: #ea580c; }
-
-    .info-card h4 {
-        font-size: 15px;
-        font-weight: 700;
-        color: #111827;
-        margin: 0 0 6px 0;
-    }
-
-    .info-card p {
-        font-size: 12px;
-        color: #6b7280;
-        margin: 0 0 16px 0;
-        line-height:
+    # Header principale
+    st.markdown("<div class='welcome-text'>BENVENUTO SU</div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-title'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-subtitle'>L
