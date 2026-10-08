@@ -42,7 +42,9 @@ if GROQ_API_KEY:
 if not modelli_disponibili:
     modelli_disponibili = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
-# Inizializzazione Session State per Cronologia e Risultato Attivo
+# ---------------------------------------------------------
+# INITIALIZE SESSION STATES
+# ---------------------------------------------------------
 if "cronologia" not in st.session_state:
     st.session_state.cronologia = []
 
@@ -52,8 +54,11 @@ if "ultimo_risultato" not in st.session_state:
 if "ultima_voce" not in st.session_state:
     st.session_state.ultima_voce = ""
 
+if "database_gare" not in st.session_state:
+    st.session_state.database_gare = []
+
 # ---------------------------------------------------------
-# LOGO SVG VETTORIALE (MINIMAL M)
+# LOGO VETTORIALE SVG (MINIMAL M)
 # ---------------------------------------------------------
 SVG_LOGO_SIDEBAR = (
     '<svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">'
@@ -80,7 +85,7 @@ css_lines = [
     ".input-card-header { font-size: 18px; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }",
     ".input-card-desc { font-size: 13px; color: #6b7280; margin-bottom: 16px; }",
     ".stTextArea textarea { background-color: #f9fafb !important; border: 1px solid #e5e7eb !important; border-radius: 10px !important; color: #111827 !important; font-size: 14px !important; }",
-    ".stTextArea textarea:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; }"
+    ".stTextArea textarea:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; }",
     "div.stButton > button { background-color: #2563eb !important; color: #ffffff !important; font-weight: 600 !important; font-size: 13px !important; letter-spacing: 0.5px !important; border-radius: 10px !important; padding: 10px 24px !important; border: none !important; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important; }",
     "div.stButton > button:hover { background-color: #1d4ed8 !important; }",
     ".result-container { background-color: #ffffff; border-radius: 16px; padding: 28px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-top: 20px; margin-bottom: 30px; }",
@@ -119,8 +124,8 @@ with st.sidebar:
         [
             "📄 Analisi capitolato", 
             "⏱️ Cronologia", 
-            "📁 File salvati", 
-            "⚖️ Confronta le migliorie"
+            "📁 Archivio Gare & Training", 
+            "⚖️ Stima Punteggio Gara"
         ],
         label_visibility="collapsed"
     )
@@ -168,14 +173,25 @@ if menu == "📄 Analisi capitolato":
         if not client:
             st.error("⚠️ API Key di Groq non trovata nei Secrets.")
         elif voce.strip():
+            # RECUPERA I MIGLIORI ESEMPI DAL DATABASE DELLE GARE PER APPRENDERE LO STILE
+            esempi_stile = ""
+            gare_top = [g for g in st.session_state.database_gare if g.get("punteggio", 0) >= 8.0]
+            if gare_top:
+                esempi_stile = "\n\nIMPORTANTE: Imita lo stile tecnico e vincente delle nostre migliori gare passate:\n"
+                for g in gare_top[:2]:
+                    esempi_stile += f"--- ESEMPIO GARA VINCENTE (Voto {g['punteggio']}/10) ---\n{g['relazione'][:500]}...\n"
+
             prompt = (
-                "Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni.\n\n"
+                "Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni.\n"
+                f"{esempi_stile}\n"
                 f"Analizza la seguente voce di capitolato:\n{voce}\n\n"
                 "Fornisci una risposta chiara, professionale e ben strutturata in Markdown:\n"
                 "### 🔍 Requisiti e Prestazioni Principali\n"
                 "### ⚠️ Criticità e Vincoli di Gara\n"
                 "### 💡 Proposte di Miglioria Tecnico-Economica (almeno 5 punti)\n"
-                "### 📦 Prodotti e Soluzioni Consigliate (con suggerimenti sui marchi/tipologie e link di ricerca)\n"
+                "### 📦 Prodotti e Soluzioni Consigliate\n"
+                "Proponi 3-4 marche/prodotti reali. IMPORTANTE: Trasforma il NOME di ciascun prodotto direttamente in un link di ricerca Google ordinario.\n"
+                "Esempio formato: - **[Nome Prodotto / Brand](https://www.google.com/search?q=Nome+Prodotto+scheda+tecnica)**: descrizione breve.\n"
                 "### 🌱 Conformità CAM (Criteri Ambientali Minimi)"
             )
             with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
@@ -188,11 +204,9 @@ if menu == "📄 Analisi capitolato":
                     )
                     risultato = chat_completion.choices[0].message.content
                     
-                    # Salva lo stato corrente
                     st.session_state.ultimo_risultato = risultato
                     st.session_state.ultima_voce = voce
 
-                    # Aggiunge in Cronologia
                     ora_corrente = datetime.now().strftime("%H:%M:%S")
                     st.session_state.cronologia.insert(0, {
                         "ora": ora_corrente,
@@ -231,7 +245,7 @@ elif menu == "⏱️ Cronologia":
     st.markdown("<div class='main-subtitle'>Consulta o riapri le analisi effettuate durante questa sessione.</div>", unsafe_allow_html=True)
 
     if not st.session_state.cronologia:
-        st.info("Nessuna analisi salvata nella sessione corrente. Effettua prima un'analisi nella sezione principale!")
+        st.info("Nessuna analisi salvata nella sessione corrente.")
     else:
         col_list, col_clear = st.columns([4, 1])
         with col_clear:
@@ -245,21 +259,113 @@ elif menu == "⏱️ Cronologia":
 
         for idx, item in enumerate(st.session_state.cronologia):
             with st.container():
-                st.markdown(f"<div class='history-card'>", unsafe_allow_html=True)
+                st.markdown("<div class='history-card'>", unsafe_allow_html=True)
                 st.markdown(f"**⏰ Ora:** {item['ora']}")
                 st.markdown(f"**📄 Voce analizzata:** _{item['voce'][:120]}..._" if len(item['voce']) > 120 else f"**📄 Voce analizzata:** _{item['voce']}_")
                 
-                c_view, c_space = st.columns([1, 3])
-                with c_view:
-                    if st.button(f"👁️ Riapri Analisi #{len(st.session_state.cronologia)-idx}", key=f"btn_cron_{idx}"):
-                        st.session_state.ultimo_risultato = item['risultato']
-                        st.session_state.ultima_voce = item['voce']
-                        st.success("Analisi riaperta! Torna alla scheda '📄 Analisi capitolato' per visualizzarla.")
+                num_analisi = len(st.session_state.cronologia) - idx
+                if st.button(f"🔗 Visualizza Analisi #{num_analisi}", key=f"btn_cron_{idx}", type="tertiary"):
+                    st.session_state.ultimo_risultato = item['risultato']
+                    st.session_state.ultima_voce = item['voce']
+                    st.success("Analisi ricaricata! Passa alla scheda '📄 Analisi capitolato' per consultarla.")
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-else:
-    st.info(f"Sezione **{menu}** in fase di sviluppo.")
+# ---------------------------------------------------------
+# SEZIONE: ARCHIVIO GARE & TRAINING AI
+# ---------------------------------------------------------
+elif menu == "📁 Archivio Gare & Training":
+    st.markdown("## 📁 Archivio Gare & Training AI")
+    st.markdown("<div class='main-subtitle'>Inserisci le tue gare passate e i punteggi ricevuti per allenare l'IA sul tuo stile vincente.</div>", unsafe_allow_html=True)
+
+    with st.expander("➕ Inserisci una Nuova Gara nell'Archivio", expanded=True):
+        nome_gara = st.text_input("Oggetto / Nome della Gara", placeholder="Es. Riqualificazione Scuola Primaria...")
+        relazione_gara = st.text_area("Testo / Relazione della Miglioria Presentata", height=150, placeholder="Incolla qui la miglioria o la relazione tecnica utilizzata...")
+        punteggio_gara = st.slider("Punteggio Tecnico Ottenuto (da 0 a 10)", min_value=0.0, max_value=10.0, value=8.5, step=0.1)
+        
+        if st.button("💾 Salva Gara nel Database"):
+            if nome_gara.strip() and relazione_gara.strip():
+                st.session_state.database_gare.append({
+                    "id": len(st.session_state.database_gare) + 1,
+                    "nome": nome_gara,
+                    "relazione": relazione_gara,
+                    "punteggio": punteggio_gara
+                })
+                st.success(f"Gara '{nome_gara}' salvata con successo! L'IA ne terrà conto nelle prossime risposte.")
+            else:
+                st.warning("Compila sia il nome che il testo della relazione.")
+
+    st.divider()
+    st.markdown("### 📚 Database Gare Archiviate")
+
+    if not st.session_state.database_gare:
+        st.info("Nessuna gara salvata finora. Aggiungi la tua prima gara per iniziare il training dell'IA!")
+    else:
+        for idx, g in enumerate(st.session_state.database_gare):
+            with st.container():
+                st.markdown(f"<div class='history-card'>", unsafe_allow_html=True)
+                col_g1, col_g2 = st.columns([3, 1])
+                with col_g1:
+                    st.markdown(f"### 🏆 {g['nome']}")
+                    st.markdown(f"_{g['relazione'][:200]}..._")
+                with col_g2:
+                    st.metric("Punteggio Tecnico", f"{g['punteggio']}/10")
+                    
+                    # Aggiornamento punteggio
+                    nuovo_voto = st.number_input("Aggiorna Voto", min_value=0.0, max_value=10.0, value=float(g['punteggio']), step=0.1, key=f"voto_{idx}")
+                    if nuovo_voto != g['punteggio']:
+                        st.session_state.database_gare[idx]['punteggio'] = nuovo_voto
+                        st.rerun()
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# SEZIONE: STIMA PUNTEGGIO GARA
+# ---------------------------------------------------------
+elif menu == "⚖️ Stima Punteggio Gara":
+    st.markdown("## ⚖️ Stima Punteggio Offerta Tecnica")
+    st.markdown("<div class='main-subtitle'>Valuta in anteprima il punteggio tecnico che la commissione potrebbe assegnare alla tua miglioria.</div>", unsafe_allow_html=True)
+
+    with st.container():
+        miglioria_input = st.text_area("Miglioria Proposta da Valutare", height=150, placeholder="Incolla qui la soluzione tecnica o la miglioria che intendi proporre...")
+        criteri_input = st.text_input("Criteri di Valutazione / Disciplinare (Opzionale)", placeholder="Es. Criterio 2.1: Sostenibilità ambientale e risparmio energetico (Max 15 pt)")
+        
+        if st.button("🎯 CALCOLA STIMA PUNTEGGIO"):
+            if miglioria_input.strip():
+                prompt_stima = f"""
+Sei un Commissario di Gara senior esperto nella valutazione di Offerte Tecniche.
+
+Miglioria Proposta:
+{miglioria_input}
+
+Criteri di Gara / Disciplinare:
+{criteri_input if criteri_input else 'Criteri standard di valutazione dell offerta economicamente piu vantaggiosa.'}
+
+Fornisci un report strutturato in Markdown:
+### 📊 Stima Punteggio Ipotetico (es. 8.5/10)
+### 🌟 Punti di Forza (perche la commissione assegnera punti)
+### ⚠️ Punti Deboli o Rischi di Contesto
+### 💡 Consigli di Redazione per Massimizzare il Punteggio
+"""
+                with st.spinner("Valutazione in corso con l AI..."):
+                    try:
+                        chat_completion = client.chat.completions.create(
+                            messages=[{"role": "user", "content": prompt_stima}],
+                            model=modello_selezionato,
+                            temperature=0.2,
+                            max_tokens=2000
+                        )
+                        st.session_state.risultato_punteggio = chat_completion.choices[0].message.content
+                    except Exception as e:
+                        st.error(f"Errore durante l elaborazione: {e}")
+            else:
+                st.warning("Inserisci la descrizione della miglioria prima di procedere.")
+
+    if "risultato_punteggio" in st.session_state and st.session_state.risultato_punteggio:
+        st.markdown("<div class='result-container'>", unsafe_allow_html=True)
+        st.markdown("### 📊 Report della Commissione AI")
+        st.markdown(st.session_state.risultato_punteggio)
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # Footer
 st.markdown("<div class='footer-container'><div>MigliorIA | AI per gare d'appalto</div><div><span class='status-dot'></span>Sistema attivo</div></div>", unsafe_allow_html=True)
