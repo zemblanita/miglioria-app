@@ -22,7 +22,6 @@ DB_FILE = "miglioria.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    # Tabella Utenti
     c.execute('''
         CREATE TABLE IF NOT EXISTS utenti (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +29,6 @@ def init_db():
             password_hash TEXT NOT NULL
         )
     ''')
-    # Tabella Gare Utente
     c.execute('''
         CREATE TABLE IF NOT EXISTS gare (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,7 +39,6 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES utenti(id)
         )
     ''')
-    # Tabella Cronologia Utente (Permanente)
     c.execute('''
         CREATE TABLE IF NOT EXISTS cronologia (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -308,9 +305,9 @@ if not st.session_state.logged_user and st.session_state.mostra_auth_box:
         if st.button("CREA NUOVO ACCOUNT", use_container_width=True):
             if user_reg.strip() and pass_reg:
                 if register_user(user_reg.strip(), pass_reg):
-                    st.success("Account registrato con successo. Ora e possibile effettuare l'accesso.")
+                    st.success("Account registrato con successo. Ora è possibile effettuare l'accesso.")
                 else:
-                    st.error("Username gia in uso. Selezionare un nome alternativo.")
+                    st.error("Username già in uso. Selezionare un nome alternativo.")
             else:
                 st.warning("Compilare tutti i campi richiesti.")
                 
@@ -329,7 +326,7 @@ with st.sidebar:
     if st.session_state.logged_user:
         st.markdown(f"<p style='font-size:12px; color:#9ca3af; margin-top:8px;'>Account attivo: <strong style='color:#ffffff;'>{st.session_state.logged_user['username']}</strong></p>", unsafe_allow_html=True)
     else:
-        st.markdown("<p style='font-size:12px; color:#9ca3af; margin-top:8px;'>Modalita Ospite</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:12px; color:#9ca3af; margin-top:8px;'>Modalità Ospite</p>", unsafe_allow_html=True)
 
     menu = st.radio(
         "MENU",
@@ -353,7 +350,7 @@ with st.sidebar:
     )
 
 # ---------------------------------------------------------
-# SEZIONE: ANALISI CAPITOLATO (LIBERA A TUTTI)
+# SEZIONE: ANALISI CAPITOLATO
 # ---------------------------------------------------------
 if menu == "Analisi capitolato":
 
@@ -384,7 +381,6 @@ if menu == "Analisi capitolato":
         elif voce.strip():
             esempi_stile = ""
             
-            # Se l'utente è loggato, recupera le sue gare top dal DB per personalizzare la risposta
             if st.session_state.logged_user:
                 user_id = st.session_state.logged_user["id"]
                 gare_utente = get_gare_db(user_id)
@@ -421,7 +417,6 @@ if menu == "Analisi capitolato":
 
                     ora_corrente = datetime.now().strftime("%H:%M:%S")
                     
-                    # Salva su DB se loggato, altrimenti in memoria ospite
                     if st.session_state.logged_user:
                         salva_cronologia_db(st.session_state.logged_user["id"], ora_corrente, voce, risultato)
                     else:
@@ -436,7 +431,8 @@ if menu == "Analisi capitolato":
         else:
             st.warning("Inserisci una voce di capitolato per procedere.")
 
-    if st.session_state.ultimo_risultato:
+    # MOSTRAMO LA CARD SOLO ED ESCLUSIVAMENTE SE C'È UN RISULTATO VALIDO (PER EVITARE LA BARRA BIANCA VUOTA)
+    if st.session_state.ultimo_risultato and len(st.session_state.ultimo_risultato.strip()) > 0:
         st.markdown("<div class='result-container'>", unsafe_allow_html=True)
         st.markdown("### Esito dell'Analisi Tecnica")
         st.markdown(st.session_state.ultimo_risultato)
@@ -499,7 +495,7 @@ if menu == "Analisi capitolato":
         """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SEZIONE: CRONOLOGIA (PERMANENTE PER UTENTI LOGGATI)
+# SEZIONE: CRONOLOGIA
 # ---------------------------------------------------------
 elif menu == "Cronologia":
     st.markdown("## Cronologia Analisi")
@@ -548,7 +544,7 @@ elif menu == "Archivio Gare & Training":
     st.markdown("## Archivio Gare & Training AI")
     
     if not st.session_state.logged_user:
-        st.warning("Per accedere all'Archivio Gare e allenare l'IA sul tuo stile e necessario effettuare l'accesso.")
+        st.warning("Per accedere all'Archivio Gare e allenare l'IA sul tuo stile è necessario effettuare l'accesso.")
         st.info("Clicca in alto a destra su 'Accedi | Registrati' per entrare nel tuo account.")
     else:
         user_id = st.session_state.logged_user["id"]
@@ -632,7 +628,7 @@ Fornisci un report giudizioso in Markdown:
             else:
                 st.warning("Inserisci la descrizione della miglioria prima di procedere.")
 
-    if "risultato_punteggio" in st.session_state and st.session_state.risultato_punteggio:
+    if "risultato_punteggio" in st.session_state and st.session_state.risultato_punteggio and len(st.session_state.risultato_punteggio.strip()) > 0:
         st.markdown("<div class='result-container'>", unsafe_allow_html=True)
         st.markdown("### Report della Commissione AI")
         st.markdown(st.session_state.risultato_punteggio)
