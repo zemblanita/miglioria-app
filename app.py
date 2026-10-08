@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="MigliorIA",
     page_icon="🏗️",
     layout="wide",
-    initial_sidebar_state="collapsed"  # Sidebar chiusa di default stile Gemini
+    initial_sidebar_state="collapsed"
 )
 
 # 🔑 RECUPERO SICURO API KEY
@@ -34,25 +34,25 @@ if GROQ_API_KEY:
 if not modelli_disponibili:
     modelli_disponibili = ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]
 
-# Inizializzazione della cronologia chat in sessione
+# Inizializzazione della cronologia chat
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # ---------------------------------------------------------
-# STILE GRAFICO MINIMAL CHAT (GEMINI STYLE)
+# STILE GRAFICO (CSS CUSTOM)
 # ---------------------------------------------------------
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
     }
 
-    /* Fondo chiaro e pulito */
+    /* Fondo chiaro pulito */
     .stApp {
         background-color: #ffffff;
-        color: #1f2937;
+        color: #0f172a;
     }
 
     /* Sidebar scura e compatta */
@@ -60,39 +60,67 @@ st.markdown("""
         background-color: #0f172a !important;
     }
 
-    /* Titolo centrale stile Gemini */
-    .chat-header {
+    /* Header e Logo Centrale */
+    .brand-hero {
         text-align: center;
-        padding-top: 30px;
+        padding-top: 40px;
         padding-bottom: 20px;
     }
-    .chat-header h1 {
-        font-size: 36px;
-        font-weight: 700;
+    
+    .logo-svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 12px;
+    }
+
+    .brand-hero h1 {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
         color: #0f172a;
         margin: 0;
     }
-    .chat-header h1 span {
+    
+    .brand-hero h1 span {
         color: #2563eb;
     }
-    .chat-header p {
+
+    .brand-hero p {
         font-size: 15px;
-        color: #6b7280;
-        margin-top: 6px;
+        color: #64748b;
+        margin-top: 8px;
+        max-width: 580px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* RIMOZIONE BORDO ROSSO & RISTRUTTURAZIONE INPUT BAR */
+    div[data-baseweb="input"], div[data-baseweb="textarea"] {
+        border-color: #e2e8f0 !important;
+        border-radius: 24px !important;
+    }
+
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="textarea"]:focus-within {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    }
+
+    /* Override specifico per stChatInput */
+    .stChatInputContainer {
+        border-radius: 28px !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .stChatInputContainer:focus-within {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
     }
 
     /* Stile messaggi della chat */
     .stChatMessage {
         background-color: transparent !important;
-        border: none !important;
         padding: 1rem 0 !important;
-    }
-
-    /* Input bar fissa in basso stile Gemini */
-    .stChatInput {
-        border-radius: 28px !important;
-        border: 1px solid #e5e7eb !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
     }
 
     .status-badge {
@@ -107,10 +135,33 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SIDEBAR (DI DEFAULT CHIUSA)
+# DEFINIZIONE LOGO SVG (MigliorIA Icon)
+# ---------------------------------------------------------
+SVG_LOGO_BLUE = """
+<svg class="logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="22" fill="#2563EB"/>
+    <path d="M25 72V40L50 24L75 40V72" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 72V52H60V72" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="50" cy="38" r="5" fill="#60A5FA"/>
+    <path d="M78 22L82 28L88 32L82 36L78 42L74 36L68 32L74 28L78 22Z" fill="#F59E0B"/>
+</svg>
+"""
+
+SVG_LOGO_SIDEBAR = """
+<svg style="width:36px; height:36px; vertical-align:middle; margin-right:8px;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="22" fill="#2563EB"/>
+    <path d="M25 72V40L50 24L75 40V72" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M40 72V52H60V72" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="50" cy="38" r="5" fill="#60A5FA"/>
+    <path d="M78 22L82 28L88 32L82 36L78 42L74 36L68 32L74 28L78 22Z" fill="#F59E0B"/>
+</svg>
+"""
+
+# ---------------------------------------------------------
+# SIDEBAR
 # ---------------------------------------------------------
 with st.sidebar:
-    st.markdown("<h2 style='color: white;'>🏗️ Miglior<span style='color: #3b82f6;'>IA</span></h2>", unsafe_allow_html=True)
+    st.markdown(f"<div>{SVG_LOGO_SIDEBAR} <span style='font-size:22px; font-weight:800; color:white;'>Miglior<span style='color:#3b82f6;'>IA</span></span></div>", unsafe_allow_html=True)
     st.caption("AI Suite per Gare d'Appalto")
     st.markdown("---")
 
@@ -143,34 +194,33 @@ with st.sidebar:
     st.markdown("<span class='status-badge'>🟢 Groq Cloud Connesso</span>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# MAIN LAYOUT (GEMINI CHAT STYLE)
+# MAIN LAYOUT
 # ---------------------------------------------------------
 
-# Mostra l'header solo se la chat è vuota
+# Mostra Header + Logo solo se non ci sono messaggi nella chat
 if len(st.session_state.messages) == 0:
-    st.markdown("""
-    <div class="chat-header">
+    st.markdown(f"""
+    <div class="brand-hero">
+        {SVG_LOGO_BLUE}
         <h1>Miglior<span>IA</span></h1>
-        <p>Incolla una voce di capitolato per analizzare vincoli, criticità e proposte di miglioria.</p>
+        <p>Incolla una voce di capitolato per analizzare requisiti, vincoli normativi e proposte di miglioria.</p>
     </div>
     """, unsafe_allow_html=True)
 
-# Visualizzazione della cronologia dei messaggi nella chat
+# Visualizzazione dei messaggi inviati
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # ---------------------------------------------------------
-# INPUT BAR FISSA IN BASSO AL CENTRO
+# BARRA CHAT IN BASSO (NO BORDI ROSSI)
 # ---------------------------------------------------------
 if prompt_input := st.chat_input("Incolla qui la voce di capitolato da analizzare..."):
 
-    # 1. Mostra il messaggio dell'utente nella chat
     st.session_state.messages.append({"role": "user", "content": prompt_input})
     with st.chat_message("user"):
         st.markdown(prompt_input)
 
-    # 2. Prepara il prompt di analisi per l'AI
     system_prompt = f"""
 Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni ed ingegneria.
 
@@ -184,7 +234,6 @@ Rispondi in modo chiaro e ben strutturato in Markdown:
 ### 🌱 Conformità ai Criteri Ambientali Minimi (CAM)
 """
 
-    # 3. Genera la risposta dell'AI sopra la barra di input
     with st.chat_message("assistant"):
         if not client:
             error_msg = "⚠️ API Key non trovata nei Secrets di Streamlit."
@@ -201,7 +250,6 @@ Rispondi in modo chiaro e ben strutturato in Markdown:
                     risposta = chat_completion.choices[0].message.content
                     st.markdown(risposta)
                     
-                    # Salva la risposta nella sessione
                     st.session_state.messages.append({"role": "assistant", "content": risposta})
 
                 except Exception as e:
