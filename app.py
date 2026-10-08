@@ -1,4 +1,5 @@
 import streamlit as st
+from datetime import datetime
 from groq import Groq
 
 # ---------------------------------------------------------
@@ -41,9 +42,15 @@ if GROQ_API_KEY:
 if not modelli_disponibili:
     modelli_disponibili = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
-# Inizializzazione Session State
+# Inizializzazione Session State per Cronologia e Risultato Attivo
+if "cronologia" not in st.session_state:
+    st.session_state.cronologia = []
+
 if "ultimo_risultato" not in st.session_state:
     st.session_state.ultimo_risultato = None
+
+if "ultima_voce" not in st.session_state:
+    st.session_state.ultima_voce = ""
 
 # ---------------------------------------------------------
 # LOGO SVG VETTORIALE (MINIMAL M)
@@ -73,7 +80,7 @@ css_lines = [
     ".input-card-header { font-size: 18px; font-weight: 700; color: #111827; display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }",
     ".input-card-desc { font-size: 13px; color: #6b7280; margin-bottom: 16px; }",
     ".stTextArea textarea { background-color: #f9fafb !important; border: 1px solid #e5e7eb !important; border-radius: 10px !important; color: #111827 !important; font-size: 14px !important; }",
-    ".stTextArea textarea:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; }",
+    ".stTextArea textarea:focus { border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; }"
     "div.stButton > button { background-color: #2563eb !important; color: #ffffff !important; font-weight: 600 !important; font-size: 13px !important; letter-spacing: 0.5px !important; border-radius: 10px !important; padding: 10px 24px !important; border: none !important; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important; }",
     "div.stButton > button:hover { background-color: #1d4ed8 !important; }",
     ".result-container { background-color: #ffffff; border-radius: 16px; padding: 28px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-top: 20px; margin-bottom: 30px; }",
@@ -86,6 +93,7 @@ css_lines = [
     ".info-card h4 { font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 6px 0; }",
     ".info-card p { font-size: 12px; color: #6b7280; margin: 0 0 16px 0; line-height: 1.4; }",
     ".card-arrow { font-size: 16px; color: #9ca3af; }",
+    ".history-card { background-color: #ffffff; border-radius: 12px; padding: 18px; border: 1px solid #e5e7eb; margin-bottom: 12px; }",
     ".footer-container { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }",
     ".status-dot { height: 8px; width: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; }",
     "</style>"
@@ -131,21 +139,20 @@ with st.sidebar:
     st.markdown("<div style='font-size: 12px; color: #ffffff; opacity: 0.8;'><strong style='color: #ffffff;'>MigliorIA</strong><br>Piu valore alle tue gare.</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# MAIN CONTENT
+# SEZIONE: ANALISI CAPITOLATO
 # ---------------------------------------------------------
 if menu == "📄 Analisi capitolato":
 
-    # Header principale
     st.markdown("<div class='welcome-text'>BENVENUTO SU</div>", unsafe_allow_html=True)
     st.markdown("<div class='main-title'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
     st.markdown("<div class='main-subtitle'>L&#39;intelligenza artificiale al servizio delle tue gare d&#39;appalto. Analizza, migliora, ottimizza.</div>", unsafe_allow_html=True)
 
-    # Card principale Voce di Capitolato
     with st.container():
         st.markdown("<div class='input-card-header'>📄 Voce di capitolato</div><div class='input-card-desc'>Incolla qui la voce di capitolato da analizzare.</div>", unsafe_allow_html=True)
 
         voce = st.text_area(
             "Voce di capitolato input",
+            value=st.session_state.ultima_voce,
             height=160,
             placeholder='Esempio: "Fornitura e posa di unita di climatizzazione con caratteristiche..."',
             label_visibility="collapsed"
@@ -157,7 +164,6 @@ if menu == "📄 Analisi capitolato":
         with col_btn:
             analizza_clicked = st.button("✨ ANALIZZA VOCE", use_container_width=True)
 
-    # Logica di Elaborazione
     if analizza_clicked:
         if not client:
             st.error("⚠️ API Key di Groq non trovata nei Secrets.")
@@ -180,14 +186,25 @@ if menu == "📄 Analisi capitolato":
                         temperature=0.2,
                         max_tokens=3000
                     )
-                    st.session_state.ultimo_risultato = chat_completion.choices[0].message.content
+                    risultato = chat_completion.choices[0].message.content
+                    
+                    # Salva lo stato corrente
+                    st.session_state.ultimo_risultato = risultato
+                    st.session_state.ultima_voce = voce
+
+                    # Aggiunge in Cronologia
+                    ora_corrente = datetime.now().strftime("%H:%M:%S")
+                    st.session_state.cronologia.insert(0, {
+                        "ora": ora_corrente,
+                        "voce": voce,
+                        "risultato": risultato
+                    })
 
                 except Exception as e:
                     st.error(f"Errore durante l'elaborazione API: {e}")
         else:
             st.warning("Inserisci una voce di capitolato per procedere.")
 
-    # MOSTRA IL RISULTATO COMPLETO
     if st.session_state.ultimo_risultato:
         st.markdown("<div class='result-container'>", unsafe_allow_html=True)
         st.markdown("### 📊 Esito dell'Analisi Tecnica")
@@ -196,20 +213,50 @@ if menu == "📄 Analisi capitolato":
 
     st.write("")
 
-    # 4 Cards Informative
     c1, c2, c3, c4 = st.columns(4)
-    
     with c1:
         st.markdown("<div class='info-card'><div><div class='icon-badge badge-blue'>📄</div><h4>Analisi intelligente</h4><p>Estrai i requisiti, i vincoli e le criticita della voce di capitolato con l'AI.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
-        
     with c2:
         st.markdown("<div class='info-card'><div><div class='icon-badge badge-green'>💡</div><h4>Migliorie su misura</h4><p>Ottieni proposte concrete per migliorare le prestazioni, la sostenibilita e il rapporto qualita/prezzo.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
-        
     with c3:
         st.markdown("<div class='info-card'><div><div class='icon-badge badge-purple'>📦</div><h4>Prodotti e soluzioni</h4><p>Scopri soluzioni tecniche e prodotti compatibili con i requisiti di gara e i CAM.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
-        
     with c4:
         st.markdown("<div class='info-card'><div><div class='icon-badge badge-orange'>⭐</div><h4>Confronta e scegli</h4><p>Metti a confronto le migliorie proposte per individuare la soluzione migliore.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# SEZIONE: CRONOLOGIA
+# ---------------------------------------------------------
+elif menu == "⏱️ Cronologia":
+    st.markdown("## ⏱️ Cronologia Analisi")
+    st.markdown("<div class='main-subtitle'>Consulta o riapri le analisi effettuate durante questa sessione.</div>", unsafe_allow_html=True)
+
+    if not st.session_state.cronologia:
+        st.info("Nessuna analisi salvata nella sessione corrente. Effettua prima un'analisi nella sezione principale!")
+    else:
+        col_list, col_clear = st.columns([4, 1])
+        with col_clear:
+            if st.button("🗑️ Svuota Cronologia", use_container_width=True):
+                st.session_state.cronologia = []
+                st.session_state.ultimo_risultato = None
+                st.session_state.ultima_voce = ""
+                st.rerun()
+
+        st.divider()
+
+        for idx, item in enumerate(st.session_state.cronologia):
+            with st.container():
+                st.markdown(f"<div class='history-card'>", unsafe_allow_html=True)
+                st.markdown(f"**⏰ Ora:** {item['ora']}")
+                st.markdown(f"**📄 Voce analizzata:** _{item['voce'][:120]}..._" if len(item['voce']) > 120 else f"**📄 Voce analizzata:** _{item['voce']}_")
+                
+                c_view, c_space = st.columns([1, 3])
+                with c_view:
+                    if st.button(f"👁️ Riapri Analisi #{len(st.session_state.cronologia)-idx}", key=f"btn_cron_{idx}"):
+                        st.session_state.ultimo_risultato = item['risultato']
+                        st.session_state.ultima_voce = item['voce']
+                        st.success("Analisi riaperta! Torna alla scheda '📄 Analisi capitolato' per visualizzarla.")
+
+                st.markdown("</div>", unsafe_allow_html=True)
 
 else:
     st.info(f"Sezione **{menu}** in fase di sviluppo.")
