@@ -1,15 +1,14 @@
 import streamlit as st
-import urllib.parse
 from groq import Groq
 
 # ---------------------------------------------------------
 # CONFIGURAZIONE PAGINA
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="MigliorIA",
+    page_title="MigliorIA - AI per Gare d'Appalto",
     page_icon="🏗️",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # 🔑 RECUPERO API KEY
@@ -24,7 +23,6 @@ if GROQ_API_KEY:
         response = client.models.list()
         tutti_modelli = [m.id for m in response.data]
         
-        # Filtriamo escludendo modelli non pertinenti o con limiti OTPM stringenti
         modelli_disponibili = [
             m for m in tutti_modelli 
             if not any(banned in m.lower() for banned in ["whisper", "guard", "orpheus", "safetensors", "preview", "qwen"])
@@ -43,12 +41,8 @@ if GROQ_API_KEY:
 if not modelli_disponibili:
     modelli_disponibili = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
 
-# Inizializzazione cronologia chat
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
 # ---------------------------------------------------------
-# STILE CSS INTERFACCIA BLU E INPUT
+# CSS PER REPLICARE FEDELMENTE IL MOCK-UP
 # ---------------------------------------------------------
 st.markdown("""
 <style>
@@ -58,63 +52,176 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* Fondo applicazione in SFUMATURA BLU */
+    /* Fondo chiaro e pulito */
     .stApp {
-        background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e293b 100%);
-        color: #f8fafc;
+        background-color: #f3f4f6;
+        color: #1f2937;
     }
 
-    /* Sidebar scura bluastra */
+    /* Sidebar scura blu profondo */
     [data-testid="stSidebar"] {
-        background-color: #070a12 !important;
-        border-right: 1px solid rgba(255,255,255,0.08);
+        background-color: #0b1329 !important;
+        padding-top: 20px;
     }
     [data-testid="stSidebar"] * {
-        color: #e2e8f0 !important;
+        color: #9ca3af !important;
     }
 
-    /* Titolo centrale e testo blu */
-    .hero-title {
-        text-align: center;
-        margin-top: 40px;
-        font-size: 42px;
+    /* Stile radio button della sidebar */
+    [data-testid="stSidebar"] .stRadio label {
+        font-size: 14px !important;
+        padding: 10px 12px !important;
+        border-radius: 8px !important;
+        margin-bottom: 4px !important;
+    }
+
+    /* Titoli Header */
+    .welcome-text {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: #9ca3af;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+    }
+
+    .main-title {
+        font-size: 38px;
         font-weight: 800;
-        color: #ffffff;
+        color: #111827;
+        margin: 0;
+        line-height: 1.1;
     }
-    .hero-title span {
-        color: #3b82f6;
+    .main-title span {
+        color: #2563eb;
     }
-    .hero-subtitle {
-        text-align: center;
-        color: #94a3b8;
+
+    .main-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 6px;
+        margin-bottom: 24px;
+    }
+
+    /* Card Principale dell'Input */
+    .input-card {
+        background-color: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 24px;
+    }
+
+    .input-card-header {
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .input-card-desc {
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 16px;
+    }
+
+    /* Text Area personalizzata grigio chiaro */
+    .stTextArea textarea {
+        background-color: #f9fafb !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 10px !important;
+        color: #111827 !important;
+        font-size: 14px !important;
+    }
+    .stTextArea textarea:focus {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    }
+
+    /* Pulsante Blu con angoli smussati */
+    div.stButton > button {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        letter-spacing: 0.5px !important;
+        border-radius: 10px !important;
+        padding: 10px 24px !important;
+        border: none !important;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important;
+    }
+    div.stButton > button:hover {
+        background-color: #1d4ed8 !important;
+    }
+
+    /* 4 Cards Informative in Basso */
+    .info-card {
+        background-color: #ffffff;
+        border-radius: 14px;
+        padding: 20px;
+        border: 1px solid #e5e7eb;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .icon-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        font-size: 18px;
+    }
+    .badge-blue { background-color: #eff6ff; color: #2563eb; }
+    .badge-green { background-color: #f0fdf4; color: #16a34a; }
+    .badge-purple { background-color: #faf5ff; color: #9333ea; }
+    .badge-orange { background-color: #fff7ed; color: #ea580c; }
+
+    .info-card h4 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 6px 0;
+    }
+
+    .info-card p {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 0 0 16px 0;
+        line-height: 1.4;
+    }
+
+    .card-arrow {
         font-size: 16px;
-        margin-bottom: 30px;
+        color: #9ca3af;
     }
 
-    /* Personalizzazione messaggi chat */
-    .stChatMessage {
-        background-color: rgba(30, 41, 59, 0.4) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 16px !important;
-        padding: 1.2rem !important;
-        margin-bottom: 12px !important;
+    /* Footer con indicatore stato verde */
+    .footer-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 30px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+        font-size: 12px;
+        color: #9ca3af;
     }
-
-    /* Input Bar in Basso - Stile Blu Tech (Niente bordi rossi) */
-    .stChatInputContainer {
-        border: 1px solid #334155 !important;
-        border-radius: 28px !important;
-        background-color: #0f172a !important;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
-    }
-
-    .stChatInputContainer:focus-within {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
-    }
-
-    .stChatInput textarea {
-        color: #f8fafc !important;
+    .status-dot {
+        height: 8px;
+        width: 8px;
+        background-color: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -123,100 +230,171 @@ st.markdown("""
 # SIDEBAR
 # ---------------------------------------------------------
 with st.sidebar:
-    st.markdown("<h2 style='color: white;'>🏗️ Miglior<span style='color: #3b82f6;'>IA</span></h2>", unsafe_allow_html=True)
-    st.caption("AI Suite per Gare d'Appalto")
-    st.divider()
+    st.markdown("""
+        <div style='display: flex; align-items: center; gap: 10px; margin-bottom: 30px;'>
+            <div style='background: #2563eb; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800;'>M</div>
+            <span style='font-size: 20px; font-weight: 800; color: white;'>Miglior<span style='color: #3b82f6;'>IA</span></span>
+        </div>
+    """, unsafe_allow_html=True)
 
     menu = st.radio(
-        "Navigazione",
+        "MENU",
         [
             "📄 Analisi capitolato", 
-            "🔍 Ricerca prodotto", 
-            "🏆 Confronto miglioria", 
-            "📚 CAM e documentazione"
-        ]
+            "⏱️ Cronologia", 
+            "📁 File salvati", 
+            "⚖️ Confronta le migliorie"
+        ],
+        label_visibility="collapsed"
     )
 
-    st.divider()
-    st.markdown("**Engine AI**")
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #6b7280;'>CONFIGURAZIONE ENGINE</p>", unsafe_allow_html=True)
     
     modello_selezionato = st.selectbox(
-        "Modello attivo:",
+        "Modello Groq:",
         options=modelli_disponibili,
-        index=0
+        index=0,
+        label_visibility="collapsed"
     )
 
-    st.divider()
-    if st.button("🗑️ Nuova Chat", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("""
+        <div style='font-size: 12px; color: #6b7280;'>
+            <strong>MigliorIA</strong><br>
+            Più valore alle tue gare.
+        </div>
+    """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# MAIN INTERFACE (CHAT BLU STYLE)
+# MAIN CONTENT
 # ---------------------------------------------------------
+if menu == "📄 Analisi capitolato":
 
-# Mostra il titolo solo se la chat è vuota
-if len(st.session_state.messages) == 0:
-    st.markdown("<div class='hero-title'>🏗️ Miglior<span>IA</span></div>", unsafe_allow_html=True)
-    st.markdown("<div class='hero-subtitle'>Scrivi o incolla un materiale o voce di capitolato per identificare subito la miglioria e i link ai prodotti.</div>", unsafe_allow_html=True)
+    # Header principale
+    st.markdown("<div class='welcome-text'>BENVENUTO SU</div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-title'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-subtitle'>L'intelligenza artificiale al servizio delle tue gare d'appalto. Analizza, migliora, ottimizza.</div>", unsafe_allow_html=True)
 
-# Stampa la cronologia dei messaggi
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+    # Card principale Voce di Capitolato
+    with st.container():
+        st.markdown("""
+            <div class='input-card-header'>📄 Voce di capitolato</div>
+            <div class='input-card-desc'>Incolla qui la voce di capitolato da analizzare.</div>
+        """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# BARRA CHAT IN BASSO
-# ---------------------------------------------------------
-if prompt_input := st.chat_input("Incolla qui un materiale o una voce di capitolato..."):
+        voce = st.text_area(
+            "Voce di capitolato input",
+            height=160,
+            placeholder='Esempio: "Fornitura e posa di unità di climatizzazione con caratteristiche..."',
+            label_visibility="collapsed"
+        )
 
-    # Mostra messaggio utente
-    st.session_state.messages.append({"role": "user", "content": prompt_input})
-    with st.chat_message("user"):
-        st.markdown(prompt_input)
+        col_char, col_btn = st.columns([2, 1])
+        with col_char:
+            st.caption(f"{len(voce)}/10000")
+        with col_btn:
+            analizza_clicked = st.button("✨ ANALIZZA VOCE", use_container_width=True)
 
-    # Prompt ottimizzato per estrarre migliorie E Generare Link ricerca prodotti
-    system_prompt = f"""
-Sei un esperto senior di capitolati tecnici, materiali da costruzione e gare d'appalto.
-
-Analizza questo materiale / voce di capitolato:
-"{prompt_input}"
-
-Fornisci una risposta immediata, chiara e ben formattata in Markdown strutturata così:
-
-### 💡 Miglioria Tecnica Consigliata
-Spiega la miglioria principale da proporre in gara (prestazioni, sostenibilità, durabilità o risparmio).
-
-### 🔍 Requisiti e Scheda Tecnica Chiave
-Elenca in un elenco puntato i parametri fondamentali da verificare per il nuovo prodotto.
-
-### 📦 Prodotti e Soluzioni Tecniche Suggerite
-Proponi 3 marche/prodotti o tipologie di prodotti reali idonei.
-Per OGNI prodotto o tipologia proposta, fornisci UN LINK DI RICERCA GOOGLE formattato in Markdown per accedere subito ai cataloghi o schede tecniche.
-
-Esempio di formattazione link:
-- **[Nome Prodotto / Produttore]**: [🔍 Cerca Schede Tecniche e Cataloghi](https://www.google.com/search?q=NOME_PRODOTTO+scheda+tecnica)
-
-### 🌱 Note di Conformità CAM
-Breve cenno sui Criteri Ambientali Minimi pertinenti per questa miglioria.
-"""
-
-    # Risposta AI
-    with st.chat_message("assistant"):
+    # Risultato Analisi AI
+    if analizza_clicked:
         if not client:
-            st.error("⚠️ API Key di Groq non trovata nei Secrets di Streamlit.")
-        else:
-            with st.spinner(f"Analisi e ricerca soluzioni in corso con {modello_selezionato}..."):
+            st.error("⚠️ API Key di Groq non trovata nei Secrets.")
+        elif voce.strip():
+            prompt = f"""
+Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni.
+
+Analizza la seguente voce di capitolato:
+{voce}
+
+Fornisci una risposta chiara, professionale e ben strutturata in Markdown:
+### 🔍 Requisiti e Prestazioni Principali
+### ⚠️ Criticità e Vincoli di Gara
+### 💡 Proposte di Miglioria Tecnico-Economica (almeno 5 punti)
+### 📦 Prodotti e Soluzioni Consigliate (con suggerimenti sui marchi/tipologie)
+### 🌱 Conformità CAM (Criteri Ambientali Minimi)
+"""
+            with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
                 try:
                     chat_completion = client.chat.completions.create(
-                        messages=[{"role": "user", "content": system_prompt}],
+                        messages=[{"role": "user", "content": prompt}],
                         model=modello_selezionato,
                         temperature=0.2,
                         max_tokens=1000
                     )
                     risposta = chat_completion.choices[0].message.content
-                    st.markdown(risposta)
-                    st.session_state.messages.append({"role": "assistant", "content": risposta})
+
+                    st.success("Analisi completata con successo!")
+                    
+                    with st.container():
+                        st.markdown("### 📊 Risultato dell'Analisi Tecnica")
+                        st.markdown(risposta)
 
                 except Exception as e:
                     st.error(f"Errore durante l'elaborazione API: {e}")
+        else:
+            st.warning("Inserisci una voce di capitolato per procedere.")
+
+    st.write("")
+
+    # 4 Cards Informative
+    c1, c2, c3, c4 = st.columns(4)
+    
+    with c1:
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-blue'>📄</div>
+                    <h4>Analisi intelligente</h4>
+                    <p>Estrai i requisiti, i vincoli e le criticità della voce di capitolato con l'AI.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with c2:
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-green'>💡</div>
+                    <h4>Migliorie su misura</h4>
+                    <p>Ottieni proposte concrete per migliorare le prestazioni, la sostenibilità e il rapporto qualità/prezzo.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with c3:
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-purple'>📦</div>
+                    <h4>Prodotti e soluzioni</h4>
+                    <p>Scopri soluzioni tecniche e prodotti compatibili con i requisiti di gara e i CAM.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with c4:
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-orange'>⭐</div>
+                    <h4>Confronta e scegli</h4>
+                    <p>Metti a confronto le migliorie proposte per individuare la soluzione migliore.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
+
+else:
+    st.info(f"Sezione **{menu}** in fase di sviluppo.")
+
+# Footer
+st.markdown("""
+    <div class='footer-container'>
+        <div>MigliorIA | AI per gare d'appalto</div>
+        <div><span class='status-dot'></span>Sistema attivo</div>
+    </div>
+""", unsafe_allow_html=True)
