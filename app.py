@@ -1,4 +1,7 @@
 import streamlit as st
+import sqlite3
+import hashlib
+import os
 from datetime import datetime
 from groq import Groq
 
@@ -12,7 +15,87 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 🔑 RECUPERO API KEY
+# ---------------------------------------------------------
+# GESTIONE DATABASE SQLITE
+# ---------------------------------------------------------
+DB_FILE = "miglioria.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    # Tabella Utenti
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS utenti (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL
+        )
+    ''')
+    # Tabella Gare Utente
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS gare (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            nome TEXT NOT NULL,
+            relazione TEXT NOT NULL,
+            punteggio REAL NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES utenti(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def make_hash(password):
+    return hashlib.pbkdf2_hmac('sha256', password.encode(), b'miglioria_salt', 100000).hex()
+
+def register_user(username, password):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO utenti (username, password_hash) VALUES (?, ?)", (username, make_hash(password)))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False
+
+def login_user(username, password):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, username FROM utenti WHERE username = ? AND password_hash = ?", (username, make_hash(password)))
+    user = c.fetchone()
+    conn.close()
+    return user
+
+def salva_gara_db(user_id, nome, relazione, punteggio):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO gare (user_id, nome, relazione, punteggio) VALUES (?, ?, ?, ?)", (user_id, nome, relazione, punteggio))
+    conn.commit()
+    conn.close()
+
+def get_gare_db(user_id):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, nome, relazione, punteggio FROM gare WHERE user_id = ? ORDER BY id DESC", (user_id,))
+    rows = c.fetchall()
+    conn.close()
+    return [{"id": r[0], "nome": r[1], "relazione": r[2], "punteggio": r[3]} for r in rows]
+
+def update_voto_gara_db(gara_id, nuovo_punteggio):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("UPDATE gare SET punteggio = ? WHERE id = ?", (nuovo_punteggio, gara_id))
+    conn.commit()
+    conn.close()
+
+# Inizializza DB
+init_db()
+
+# ---------------------------------------------------------
+# RECUPERO API KEY & GROQ
+# ---------------------------------------------------------
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
 
 client = None
@@ -45,6 +128,9 @@ if not modelli_disponibili:
 # ---------------------------------------------------------
 # INITIALIZE SESSION STATES
 # ---------------------------------------------------------
+if "logged_user" not in st.session_state:
+    st.session_state.logged_user = None
+
 if "cronologia" not in st.session_state:
     st.session_state.cronologia = []
 
@@ -53,9 +139,6 @@ if "ultimo_risultato" not in st.session_state:
 
 if "ultima_voce" not in st.session_state:
     st.session_state.ultima_voce = ""
-
-if "database_gare" not in st.session_state:
-    st.session_state.database_gare = []
 
 # ---------------------------------------------------------
 # LOGO VETTORIALE SVG (MINIMAL M)
@@ -68,7 +151,7 @@ SVG_LOGO_SIDEBAR = (
 )
 
 # ---------------------------------------------------------
-# STILE CSS SICURO (JOIN DI STRINGHE BREVI)
+# STILE CSS SICURO
 # ---------------------------------------------------------
 css_lines = [
     "<style>",
@@ -108,8 +191,51 @@ CSS_STYLE = "".join(css_lines)
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SIDEBAR
+# LOGIN / REGISTRAZIONE (SE NON AUTENTICATO)
 # ---------------------------------------------------------
+if st.session_state.logged_user is None:
+    st.markdown("<div class='welcome-text' style='text-align:center;'>BENVENUTO SU</div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-title' style='text-align:center;'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-subtitle' style='text-align:center;'>Accedi o registrati per gestire i tuoi capitolati e archiviare le tue gare.</div>", unsafe_allow_html=True)
+    
+    col_box1, col_box2, col_box3 = st.columns([1, 2, 1])
+    with col_box2:
+        st.markdown("<div class='result-container'>", unsafe_allow_html=True)
+        tab_login, tab_register = st.tabs(["🔑 Accedi", "📝 Registrati"])
+        
+        with tab_login:
+            user_login = st.text_input("Username", key="l_user")
+            pass_login = st.text_input("Password", type="password", key="l_pass")
+            if st.button("ACCEDI ALLA PIATTAFORMA", use_container_width=True):
+                account = login_user(user_login.strip(), pass_login)
+                if account:
+                    st.session_state.logged_user = {"id": account[0], "username": account[1]}
+                    st.success("Accesso effettuato!")
+                    st.rerun()
+                else:
+                    st.error("Username o password errati.")
+
+        with tab_register:
+            user_reg = st.text_input("Scegli Username", key="r_user")
+            pass_reg = st.text_input("Scegli Password", type="password", key="r_pass")
+            if st.button("CREA ACCOUNT", use_container_width=True):
+                if user_reg.strip() and pass_reg:
+                    if register_user(user_reg.strip(), pass_reg):
+                        st.success("Account creato con successo! Ora puoi accedere.")
+                    else:
+                        st.error("Username già in uso. Scegli un altro nome.")
+                else:
+                    st.warning("Compila tutti i campi.")
+                    
+        st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
+
+# ---------------------------------------------------------
+# SIDEBAR (SOLO SE AUTENTICATO)
+# ---------------------------------------------------------
+user_id = st.session_state.logged_user["id"]
+username = st.session_state.logged_user["username"]
+
 with st.sidebar:
     col_logo, col_title = st.columns([1, 4])
     with col_logo:
@@ -117,7 +243,7 @@ with st.sidebar:
     with col_title:
         st.markdown("<h2 style='margin:0; padding:0; font-size:22px; font-weight:800; color:#ffffff;'>Miglior<span style='color:#3b82f6;'>IA</span></h2>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size:12px; color:#3b82f6;'>👤 Collegato come: <strong>{username}</strong></p>", unsafe_allow_html=True)
 
     menu = st.radio(
         "MENU",
@@ -130,7 +256,11 @@ with st.sidebar:
         label_visibility="collapsed"
     )
 
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    if st.button("🚪 Logout", use_container_width=True):
+        st.session_state.logged_user = None
+        st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("<p style='font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;'>CONFIGURAZIONE ENGINE</p>", unsafe_allow_html=True)
     
     modello_selezionato = st.selectbox(
@@ -139,9 +269,6 @@ with st.sidebar:
         index=0,
         label_visibility="collapsed"
     )
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size: 12px; color: #ffffff; opacity: 0.8;'><strong style='color: #ffffff;'>MigliorIA</strong><br>Piu valore alle tue gare.</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # SEZIONE: ANALISI CAPITOLATO
@@ -173,11 +300,13 @@ if menu == "📄 Analisi capitolato":
         if not client:
             st.error("⚠️ API Key di Groq non trovata nei Secrets.")
         elif voce.strip():
-            # RECUPERA I MIGLIORI ESEMPI DAL DATABASE DELLE GARE PER APPRENDERE LO STILE
+            # Carica solo le gare ad alto punteggio dell'utente dal DB SQLite
+            gare_utente = get_gare_db(user_id)
+            gare_top = [g for g in gare_utente if g["punteggio"] >= 8.0]
+            
             esempi_stile = ""
-            gare_top = [g for g in st.session_state.database_gare if g.get("punteggio", 0) >= 8.0]
             if gare_top:
-                esempi_stile = "\n\nIMPORTANTE: Imita lo stile tecnico e vincente delle nostre migliori gare passate:\n"
+                esempi_stile = "\n\nIMPORTANTE: Imita lo stile tecnico e vincente delle migliori gare dell'utente:\n"
                 for g in gare_top[:2]:
                     esempi_stile += f"--- ESEMPIO GARA VINCENTE (Voto {g['punteggio']}/10) ---\n{g['relazione'][:500]}...\n"
 
@@ -272,49 +401,46 @@ elif menu == "⏱️ Cronologia":
                 st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SEZIONE: ARCHIVIO GARE & TRAINING AI
+# SEZIONE: ARCHIVIO GARE & TRAINING (PERMANENTE SU DB)
 # ---------------------------------------------------------
 elif menu == "📁 Archivio Gare & Training":
-    st.markdown("## 📁 Archivio Gare & Training AI")
-    st.markdown("<div class='main-subtitle'>Inserisci le tue gare passate e i punteggi ricevuti per allenare l'IA sul tuo stile vincente.</div>", unsafe_allow_html=True)
+    st.markdown("## 📁 Archivio Gare & Training AI (Privato)")
+    st.markdown("<div class='main-subtitle'>Inserisci le tue gare passate per salvarle in modo permanente nel tuo account.</div>", unsafe_allow_html=True)
 
-    with st.expander("➕ Inserisci una Nuova Gara nell'Archivio", expanded=True):
+    with st.expander("➕ Inserisci una Nuova Gara nel tuo Archivio", expanded=True):
         nome_gara = st.text_input("Oggetto / Nome della Gara", placeholder="Es. Riqualificazione Scuola Primaria...")
         relazione_gara = st.text_area("Testo / Relazione della Miglioria Presentata", height=150, placeholder="Incolla qui la miglioria o la relazione tecnica utilizzata...")
         punteggio_gara = st.slider("Punteggio Tecnico Ottenuto (da 0 a 10)", min_value=0.0, max_value=10.0, value=8.5, step=0.1)
         
-        if st.button("💾 Salva Gara nel Database"):
+        if st.button("💾 Salva Gara nel Database Permanente"):
             if nome_gara.strip() and relazione_gara.strip():
-                st.session_state.database_gare.append({
-                    "id": len(st.session_state.database_gare) + 1,
-                    "nome": nome_gara,
-                    "relazione": relazione_gara,
-                    "punteggio": punteggio_gara
-                })
-                st.success(f"Gara '{nome_gara}' salvata con successo! L'IA ne terrà conto nelle prossime risposte.")
+                salva_gara_db(user_id, nome_gara.strip(), relazione_gara.strip(), punteggio_gara)
+                st.success(f"Gara '{nome_gara}' salvata permanentemente nel tuo account!")
+                st.rerun()
             else:
                 st.warning("Compila sia il nome che il testo della relazione.")
 
     st.divider()
-    st.markdown("### 📚 Database Gare Archiviate")
+    st.markdown(f"### 📚 Le tue Gare Archiviate ({username})")
 
-    if not st.session_state.database_gare:
-        st.info("Nessuna gara salvata finora. Aggiungi la tua prima gara per iniziare il training dell'IA!")
+    database_gare_utente = get_gare_db(user_id)
+
+    if not database_gare_utente:
+        st.info("Nessuna gara salvata finora nel tuo account. Aggiungi la tua prima gara per iniziare!")
     else:
-        for idx, g in enumerate(st.session_state.database_gare):
+        for idx, g in enumerate(database_gare_utente):
             with st.container():
-                st.markdown(f"<div class='history-card'>", unsafe_allow_html=True)
+                st.markdown("<div class='history-card'>", unsafe_allow_html=True)
                 col_g1, col_g2 = st.columns([3, 1])
                 with col_g1:
                     st.markdown(f"### 🏆 {g['nome']}")
                     st.markdown(f"_{g['relazione'][:200]}..._")
                 with col_g2:
                     st.metric("Punteggio Tecnico", f"{g['punteggio']}/10")
-                    
-                    # Aggiornamento punteggio
-                    nuovo_voto = st.number_input("Aggiorna Voto", min_value=0.0, max_value=10.0, value=float(g['punteggio']), step=0.1, key=f"voto_{idx}")
+                    nuovo_voto = st.number_input("Aggiorna Voto", min_value=0.0, max_value=10.0, value=float(g['punteggio']), step=0.1, key=f"db_voto_{g['id']}")
                     if nuovo_voto != g['punteggio']:
-                        st.session_state.database_gare[idx]['punteggio'] = nuovo_voto
+                        update_voto_gara_db(g['id'], nuovo_voto)
+                        st.success("Voto aggiornato!")
                         st.rerun()
 
                 st.markdown("</div>", unsafe_allow_html=True)
