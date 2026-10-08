@@ -1,7 +1,6 @@
 import streamlit as st
 import sqlite3
 import hashlib
-import os
 from datetime import datetime
 from groq import Groq
 
@@ -23,7 +22,6 @@ DB_FILE = "miglioria.db"
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    # Tabella Utenti
     c.execute('''
         CREATE TABLE IF NOT EXISTS utenti (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +29,6 @@ def init_db():
             password_hash TEXT NOT NULL
         )
     ''')
-    # Tabella Gare Utente
     c.execute('''
         CREATE TABLE IF NOT EXISTS gare (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,7 +87,6 @@ def update_voto_gara_db(gara_id, nuovo_punteggio):
     conn.commit()
     conn.close()
 
-# Inizializza DB
 init_db()
 
 # ---------------------------------------------------------
@@ -173,11 +169,11 @@ css_lines = [
     "div.stButton > button:hover { background-color: #1d4ed8 !important; }",
     ".result-container { background-color: #ffffff; border-radius: 16px; padding: 28px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-top: 20px; margin-bottom: 30px; }",
     ".info-card { background-color: #ffffff; border-radius: 14px; padding: 20px; border: 1px solid #e5e7eb; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }",
-    ".icon-badge { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 18px; }",
-    ".badge-blue { background-color: #eff6ff; color: #2563eb; }",
-    ".badge-green { background-color: #f0fdf4; color: #16a34a; }",
-    ".badge-purple { background-color: #faf5ff; color: #9333ea; }",
-    ".badge-orange { background-color: #fff7ed; color: #ea580c; }",
+    ".icon-badge { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }",
+    ".badge-blue { background-color: #eff6ff; fill: #2563eb; }",
+    ".badge-green { background-color: #f0fdf4; fill: #16a34a; }",
+    ".badge-purple { background-color: #faf5ff; fill: #9333ea; }",
+    ".badge-orange { background-color: #fff7ed; fill: #ea580c; }",
     ".info-card h4 { font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 6px 0; }",
     ".info-card p { font-size: 12px; color: #6b7280; margin: 0 0 16px 0; line-height: 1.4; }",
     ".card-arrow { font-size: 16px; color: #9ca3af; }",
@@ -191,47 +187,50 @@ CSS_STYLE = "".join(css_lines)
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# LOGIN / REGISTRAZIONE (SE NON AUTENTICATO)
+# SCHERMATA LOGIN / REGISTRAZIONE (TOTALE ASSENZA EMOJI)
 # ---------------------------------------------------------
 if st.session_state.logged_user is None:
-    st.markdown("<div class='welcome-text' style='text-align:center;'>BENVENUTO SU</div>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<div class='welcome-text' style='text-align:center;'>PIATTAFORMA ENTERPRISE</div>", unsafe_allow_html=True)
     st.markdown("<div class='main-title' style='text-align:center;'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
-    st.markdown("<div class='main-subtitle' style='text-align:center;'>Accedi o registrati per gestire i tuoi capitolati e archiviare le tue gare.</div>", unsafe_allow_html=True)
+    st.markdown("<div class='main-subtitle' style='text-align:center;'>Autenticazione richiesta per la gestione riservata dei capitolati.</div>", unsafe_allow_html=True)
     
     col_box1, col_box2, col_box3 = st.columns([1, 2, 1])
     with col_box2:
-        st.markdown("<div class='result-container'>", unsafe_allow_html=True)
-        tab_login, tab_register = st.tabs(["🔑 Accedi", "📝 Registrati"])
+        st.markdown("<div class='result-container' style='padding: 32px;'>", unsafe_allow_html=True)
+        tab_login, tab_register = st.tabs(["Accedi", "Registrati"])
         
         with tab_login:
             user_login = st.text_input("Username", key="l_user")
             pass_login = st.text_input("Password", type="password", key="l_pass")
+            st.markdown("<br>", unsafe_allow_html=True)
             if st.button("ACCEDI ALLA PIATTAFORMA", use_container_width=True):
                 account = login_user(user_login.strip(), pass_login)
                 if account:
                     st.session_state.logged_user = {"id": account[0], "username": account[1]}
-                    st.success("Accesso effettuato!")
+                    st.success("Autenticazione completata con successo.")
                     st.rerun()
                 else:
-                    st.error("Username o password errati.")
+                    st.error("Credenziali non valide. Riprova.")
 
         with tab_register:
             user_reg = st.text_input("Scegli Username", key="r_user")
             pass_reg = st.text_input("Scegli Password", type="password", key="r_pass")
-            if st.button("CREA ACCOUNT", use_container_width=True):
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("CREA NUOVO ACCOUNT", use_container_width=True):
                 if user_reg.strip() and pass_reg:
                     if register_user(user_reg.strip(), pass_reg):
-                        st.success("Account creato con successo! Ora puoi accedere.")
+                        st.success("Account registrato. Ora e possibile effettuare l'accesso.")
                     else:
-                        st.error("Username già in uso. Scegli un altro nome.")
+                        st.error("Username gia in uso. Selezionare un nome alternativo.")
                 else:
-                    st.warning("Compila tutti i campi.")
+                    st.warning("Compilare tutti i campi richiesti.")
                     
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # ---------------------------------------------------------
-# SIDEBAR (SOLO SE AUTENTICATO)
+# SIDEBAR (AUTENTICATO)
 # ---------------------------------------------------------
 user_id = st.session_state.logged_user["id"]
 username = st.session_state.logged_user["username"]
@@ -243,20 +242,20 @@ with st.sidebar:
     with col_title:
         st.markdown("<h2 style='margin:0; padding:0; font-size:22px; font-weight:800; color:#ffffff;'>Miglior<span style='color:#3b82f6;'>IA</span></h2>", unsafe_allow_html=True)
 
-    st.markdown(f"<p style='font-size:12px; color:#3b82f6;'>👤 Collegato come: <strong>{username}</strong></p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size:12px; color:#9ca3af; margin-top:8px;'>Account: <strong style='color:#ffffff;'>{username}</strong></p>", unsafe_allow_html=True)
 
     menu = st.radio(
         "MENU",
         [
-            "📄 Analisi capitolato", 
-            "⏱️ Cronologia", 
-            "📁 Archivio Gare & Training", 
-            "⚖️ Stima Punteggio Gara"
+            "Analisi capitolato", 
+            "Cronologia", 
+            "Archivio Gare & Training", 
+            "Stima Punteggio Gara"
         ],
         label_visibility="collapsed"
     )
 
-    if st.button("🚪 Logout", use_container_width=True):
+    if st.button("Logout", use_container_width=True):
         st.session_state.logged_user = None
         st.rerun()
 
@@ -273,14 +272,14 @@ with st.sidebar:
 # ---------------------------------------------------------
 # SEZIONE: ANALISI CAPITOLATO
 # ---------------------------------------------------------
-if menu == "📄 Analisi capitolato":
+if menu == "Analisi capitolato":
 
     st.markdown("<div class='welcome-text'>BENVENUTO SU</div>", unsafe_allow_html=True)
     st.markdown("<div class='main-title'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
     st.markdown("<div class='main-subtitle'>L&#39;intelligenza artificiale al servizio delle tue gare d&#39;appalto. Analizza, migliora, ottimizza.</div>", unsafe_allow_html=True)
 
     with st.container():
-        st.markdown("<div class='input-card-header'>📄 Voce di capitolato</div><div class='input-card-desc'>Incolla qui la voce di capitolato da analizzare.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='input-card-header'>Voce di capitolato</div><div class='input-card-desc'>Incolla qui la voce di capitolato da analizzare.</div>", unsafe_allow_html=True)
 
         voce = st.text_area(
             "Voce di capitolato input",
@@ -294,13 +293,12 @@ if menu == "📄 Analisi capitolato":
         with col_char:
             st.caption(f"{len(voce)}/10000")
         with col_btn:
-            analizza_clicked = st.button("✨ ANALIZZA VOCE", use_container_width=True)
+            analizza_clicked = st.button("ANALIZZA VOCE", use_container_width=True)
 
     if analizza_clicked:
         if not client:
-            st.error("⚠️ API Key di Groq non trovata nei Secrets.")
+            st.error("API Key di Groq non trovata nei Secrets.")
         elif voce.strip():
-            # Carica solo le gare ad alto punteggio dell'utente dal DB SQLite
             gare_utente = get_gare_db(user_id)
             gare_top = [g for g in gare_utente if g["punteggio"] >= 8.0]
             
@@ -315,13 +313,13 @@ if menu == "📄 Analisi capitolato":
                 f"{esempi_stile}\n"
                 f"Analizza la seguente voce di capitolato:\n{voce}\n\n"
                 "Fornisci una risposta chiara, professionale e ben strutturata in Markdown:\n"
-                "### 🔍 Requisiti e Prestazioni Principali\n"
-                "### ⚠️ Criticità e Vincoli di Gara\n"
-                "### 💡 Proposte di Miglioria Tecnico-Economica (almeno 5 punti)\n"
-                "### 📦 Prodotti e Soluzioni Consigliate\n"
+                "### Requisiti e Prestazioni Principali\n"
+                "### Criticita e Vincoli di Gara\n"
+                "### Proposte di Miglioria Tecnico-Economica (almeno 5 punti)\n"
+                "### Prodotti e Soluzioni Consigliate\n"
                 "Proponi 3-4 marche/prodotti reali. IMPORTANTE: Trasforma il NOME di ciascun prodotto direttamente in un link di ricerca Google ordinario.\n"
                 "Esempio formato: - **[Nome Prodotto / Brand](https://www.google.com/search?q=Nome+Prodotto+scheda+tecnica)**: descrizione breve.\n"
-                "### 🌱 Conformità CAM (Criteri Ambientali Minimi)"
+                "### Conformita CAM (Criteri Ambientali Minimi)"
             )
             with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
                 try:
@@ -350,27 +348,72 @@ if menu == "📄 Analisi capitolato":
 
     if st.session_state.ultimo_risultato:
         st.markdown("<div class='result-container'>", unsafe_allow_html=True)
-        st.markdown("### 📊 Esito dell'Analisi Tecnica")
+        st.markdown("### Esito dell'Analisi Tecnica")
         st.markdown(st.session_state.ultimo_risultato)
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("")
 
+    # SVG PICCOLI E PROFESSIONALI SULLE CARDS IN BASSO
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.markdown("<div class='info-card'><div><div class='icon-badge badge-blue'>📄</div><h4>Analisi intelligente</h4><p>Estrai i requisiti, i vincoli e le criticita della voce di capitolato con l'AI.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-blue'>
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    </div>
+                    <h4>Analisi intelligente</h4>
+                    <p>Estrai i requisiti, i vincoli e le criticita della voce di capitolato con l'AI.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
     with c2:
-        st.markdown("<div class='info-card'><div><div class='icon-badge badge-green'>💡</div><h4>Migliorie su misura</h4><p>Ottieni proposte concrete per migliorare le prestazioni, la sostenibilita e il rapporto qualita/prezzo.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-green'>
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+                    </div>
+                    <h4>Migliorie su misura</h4>
+                    <p>Ottieni proposte concrete per migliorare le prestazioni, la sostenibilita e il rapporto qualita/prezzo.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
     with c3:
-        st.markdown("<div class='info-card'><div><div class='icon-badge badge-purple'>📦</div><h4>Prodotti e soluzioni</h4><p>Scopri soluzioni tecniche e prodotti compatibili con i requisiti di gara e i CAM.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-purple'>
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                    </div>
+                    <h4>Prodotti e soluzioni</h4>
+                    <p>Scopri soluzioni tecniche e prodotti compatibili con i requisiti di gara e i CAM.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
     with c4:
-        st.markdown("<div class='info-card'><div><div class='icon-badge badge-orange'>⭐</div><h4>Confronta e scegli</h4><p>Metti a confronto le migliorie proposte per individuare la soluzione migliore.</p></div><div class='card-arrow'>→</div></div>", unsafe_allow_html=True)
+        st.markdown("""
+            <div class='info-card'>
+                <div>
+                    <div class='icon-badge badge-orange'>
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                    </div>
+                    <h4>Confronta e scegli</h4>
+                    <p>Metti a confronto le migliorie proposte per individuare la soluzione migliore.</p>
+                </div>
+                <div class='card-arrow'>→</div>
+            </div>
+        """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # SEZIONE: CRONOLOGIA
 # ---------------------------------------------------------
-elif menu == "⏱️ Cronologia":
-    st.markdown("## ⏱️ Cronologia Analisi")
+elif menu == "Cronologia":
+    st.markdown("## Cronologia Analisi")
     st.markdown("<div class='main-subtitle'>Consulta o riapri le analisi effettuate durante questa sessione.</div>", unsafe_allow_html=True)
 
     if not st.session_state.cronologia:
@@ -378,7 +421,7 @@ elif menu == "⏱️ Cronologia":
     else:
         col_list, col_clear = st.columns([4, 1])
         with col_clear:
-            if st.button("🗑️ Svuota Cronologia", use_container_width=True):
+            if st.button("Svuota Cronologia", use_container_width=True):
                 st.session_state.cronologia = []
                 st.session_state.ultimo_risultato = None
                 st.session_state.ultima_voce = ""
@@ -389,58 +432,58 @@ elif menu == "⏱️ Cronologia":
         for idx, item in enumerate(st.session_state.cronologia):
             with st.container():
                 st.markdown("<div class='history-card'>", unsafe_allow_html=True)
-                st.markdown(f"**⏰ Ora:** {item['ora']}")
-                st.markdown(f"**📄 Voce analizzata:** _{item['voce'][:120]}..._" if len(item['voce']) > 120 else f"**📄 Voce analizzata:** _{item['voce']}_")
+                st.markdown(f"**Ora:** {item['ora']}")
+                st.markdown(f"**Voce analizzata:** _{item['voce'][:120]}..._" if len(item['voce']) > 120 else f"**Voce analizzata:** _{item['voce']}_")
                 
                 num_analisi = len(st.session_state.cronologia) - idx
-                if st.button(f"🔗 Visualizza Analisi #{num_analisi}", key=f"btn_cron_{idx}", type="tertiary"):
+                if st.button(f"Visualizza Analisi #{num_analisi}", key=f"btn_cron_{idx}", type="tertiary"):
                     st.session_state.ultimo_risultato = item['risultato']
                     st.session_state.ultima_voce = item['voce']
-                    st.success("Analisi ricaricata! Passa alla scheda '📄 Analisi capitolato' per consultarla.")
+                    st.success("Analisi ricaricata! Passa alla scheda 'Analisi capitolato' per consultarla.")
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # SEZIONE: ARCHIVIO GARE & TRAINING (PERMANENTE SU DB)
 # ---------------------------------------------------------
-elif menu == "📁 Archivio Gare & Training":
-    st.markdown("## 📁 Archivio Gare & Training AI (Privato)")
+elif menu == "Archivio Gare & Training":
+    st.markdown("## Archivio Gare & Training AI")
     st.markdown("<div class='main-subtitle'>Inserisci le tue gare passate per salvarle in modo permanente nel tuo account.</div>", unsafe_allow_html=True)
 
-    with st.expander("➕ Inserisci una Nuova Gara nel tuo Archivio", expanded=True):
+    with st.expander("Inserisci una Nuova Gara nel tuo Archivio", expanded=True):
         nome_gara = st.text_input("Oggetto / Nome della Gara", placeholder="Es. Riqualificazione Scuola Primaria...")
         relazione_gara = st.text_area("Testo / Relazione della Miglioria Presentata", height=150, placeholder="Incolla qui la miglioria o la relazione tecnica utilizzata...")
         punteggio_gara = st.slider("Punteggio Tecnico Ottenuto (da 0 a 10)", min_value=0.0, max_value=10.0, value=8.5, step=0.1)
         
-        if st.button("💾 Salva Gara nel Database Permanente"):
+        if st.button("Salva Gara nel Database Permanente"):
             if nome_gara.strip() and relazione_gara.strip():
                 salva_gara_db(user_id, nome_gara.strip(), relazione_gara.strip(), punteggio_gara)
-                st.success(f"Gara '{nome_gara}' salvata permanentemente nel tuo account!")
+                st.success(f"Gara '{nome_gara}' salvata permanentemente nel tuo account.")
                 st.rerun()
             else:
                 st.warning("Compila sia il nome che il testo della relazione.")
 
     st.divider()
-    st.markdown(f"### 📚 Le tue Gare Archiviate ({username})")
+    st.markdown(f"### Le tue Gare Archiviate ({username})")
 
     database_gare_utente = get_gare_db(user_id)
 
     if not database_gare_utente:
-        st.info("Nessuna gara salvata finora nel tuo account. Aggiungi la tua prima gara per iniziare!")
+        st.info("Nessuna gara salvata finora nel tuo account. Aggiungi la tua prima gara per iniziare.")
     else:
         for idx, g in enumerate(database_gare_utente):
             with st.container():
                 st.markdown("<div class='history-card'>", unsafe_allow_html=True)
                 col_g1, col_g2 = st.columns([3, 1])
                 with col_g1:
-                    st.markdown(f"### 🏆 {g['nome']}")
+                    st.markdown(f"### {g['nome']}")
                     st.markdown(f"_{g['relazione'][:200]}..._")
                 with col_g2:
                     st.metric("Punteggio Tecnico", f"{g['punteggio']}/10")
                     nuovo_voto = st.number_input("Aggiorna Voto", min_value=0.0, max_value=10.0, value=float(g['punteggio']), step=0.1, key=f"db_voto_{g['id']}")
                     if nuovo_voto != g['punteggio']:
                         update_voto_gara_db(g['id'], nuovo_voto)
-                        st.success("Voto aggiornato!")
+                        st.success("Voto aggiornato.")
                         st.rerun()
 
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -448,15 +491,15 @@ elif menu == "📁 Archivio Gare & Training":
 # ---------------------------------------------------------
 # SEZIONE: STIMA PUNTEGGIO GARA
 # ---------------------------------------------------------
-elif menu == "⚖️ Stima Punteggio Gara":
-    st.markdown("## ⚖️ Stima Punteggio Offerta Tecnica")
+elif menu == "Stima Punteggio Gara":
+    st.markdown("## Stima Punteggio Offerta Tecnica")
     st.markdown("<div class='main-subtitle'>Valuta in anteprima il punteggio tecnico che la commissione potrebbe assegnare alla tua miglioria.</div>", unsafe_allow_html=True)
 
     with st.container():
         miglioria_input = st.text_area("Miglioria Proposta da Valutare", height=150, placeholder="Incolla qui la soluzione tecnica o la miglioria che intendi proporre...")
-        criteri_input = st.text_input("Criteri di Valutazione / Disciplinare (Opzionale)", placeholder="Es. Criterio 2.1: Sostenibilità ambientale e risparmio energetico (Max 15 pt)")
+        criteri_input = st.text_input("Criteri di Valutazione / Disciplinare (Opzionale)", placeholder="Es. Criterio 2.1: Sostenibilita ambientale e risparmio energetico (Max 15 pt)")
         
-        if st.button("🎯 CALCOLA STIMA PUNTEGGIO"):
+        if st.button("CALCOLA STIMA PUNTEGGIO"):
             if miglioria_input.strip():
                 prompt_stima = f"""
 Sei un Commissario di Gara senior esperto nella valutazione di Offerte Tecniche.
@@ -468,10 +511,10 @@ Criteri di Gara / Disciplinare:
 {criteri_input if criteri_input else 'Criteri standard di valutazione dell offerta economicamente piu vantaggiosa.'}
 
 Fornisci un report strutturato in Markdown:
-### 📊 Stima Punteggio Ipotetico (es. 8.5/10)
-### 🌟 Punti di Forza (perche la commissione assegnera punti)
-### ⚠️ Punti Deboli o Rischi di Contesto
-### 💡 Consigli di Redazione per Massimizzare il Punteggio
+### Stima Punteggio Ipotetico (es. 8.5/10)
+### Punti di Forza (perche la commissione assegnera punti)
+### Punti Deboli o Rischi di Contesto
+### Consigli di Redazione per Massimizzare il Punteggio
 """
                 with st.spinner("Valutazione in corso con l AI..."):
                     try:
@@ -489,7 +532,7 @@ Fornisci un report strutturato in Markdown:
 
     if "risultato_punteggio" in st.session_state and st.session_state.risultato_punteggio:
         st.markdown("<div class='result-container'>", unsafe_allow_html=True)
-        st.markdown("### 📊 Report della Commissione AI")
+        st.markdown("### Report della Commissione AI")
         st.markdown(st.session_state.risultato_punteggio)
         st.markdown("</div>", unsafe_allow_html=True)
 
