@@ -5,13 +5,13 @@ from groq import Groq
 # CONFIGURAZIONE PAGINA
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="MigliorIA - Gare d'Appalto",
+    page_title="MigliorIA",
     page_icon="🏗️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# 🔑 RECUPERO SICURO API KEY
+# 🔑 RECUPERO API KEY
 GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
 
 client = None
@@ -33,6 +33,33 @@ if GROQ_API_KEY:
 if not modelli_disponibili:
     modelli_disponibili = ["llama3-8b-8192", "llama3-70b-8192", "mixtral-8x7b-32768"]
 
+# Inizializzazione cronologia chat
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# ---------------------------------------------------------
+# STILE CSS PER RIMUOVERE BORDI ROSSI
+# ---------------------------------------------------------
+st.markdown("""
+<style>
+    /* Sfondo pulito */
+    .stApp {
+        background-color: #ffffff;
+    }
+    
+    /* Rimuove i bordi rossi sul focus dell'input bar */
+    .stChatInputContainer {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 24px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
+    }
+    .stChatInputContainer:focus-within {
+        border-color: #2563eb !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ---------------------------------------------------------
 # SIDEBAR
 # ---------------------------------------------------------
@@ -42,7 +69,7 @@ with st.sidebar:
     st.divider()
 
     menu = st.radio(
-        "Menu principale",
+        "Navigazione",
         [
             "📄 Analisi capitolato", 
             "🔍 Ricerca prodotto", 
@@ -52,90 +79,72 @@ with st.sidebar:
     )
 
     st.divider()
-    st.markdown("**Configurazione Engine**")
+    st.markdown("**Engine AI**")
     
     modello_selezionato = st.selectbox(
-        "Modello Groq attivo:",
+        "Modello attivo:",
         options=modelli_disponibili,
         index=0
     )
 
     st.divider()
-    st.caption("🟢 Connesso a Groq Cloud API")
+    if st.button("🗑️ Nuova Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
 
 # ---------------------------------------------------------
-# HEADER NATIVO E PULITO
+# MAIN INTERFACE (STILE GEMINI)
 # ---------------------------------------------------------
-st.title("🏗️ MigliorIA")
-st.subtitle = st.caption("Analisi intelligente dei capitolati tecnici e proposte di miglioria per gare d'appalto.")
 
-st.divider()
+# Mostra il titolo al centro solo se non ci sono ancora messaggi
+if len(st.session_state.messages) == 0:
+    st.markdown("<h1 style='text-align: center; margin-top: 50px; color: #0f172a;'>🏗️ MigliorIA</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #64748b; font-size: 16px;'>Incolla una voce di capitolato per avviare l'analisi intelligente.</p>", unsafe_allow_html=True)
+
+# Stampa la cronologia dei messaggi
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
 # ---------------------------------------------------------
-# MAIN CONTENT
+# BARRA CHAT IN BASSO
 # ---------------------------------------------------------
-if menu == "📄 Analisi capitolato":
+if prompt_input := st.chat_input("Incolla qui la voce di capitolato da analizzare..."):
 
-    st.subheader("Voce di Capitolato da Analizzare")
-    
-    # Text area pulita native Streamlit
-    voce = st.text_area(
-        label="Incolla il testo del capitolato o la specifica tecnica:",
-        height=220,
-        placeholder="Es: Fornitura e posa in opera di serramenti in alluminio a taglio termico con trasmittanza termica Uw non superiore a 1.3 W/m²K, abbattimento acustico 42 dB..."
-    )
+    # Mostra messaggio utente
+    st.session_state.messages.append({"role": "user", "content": prompt_input})
+    with st.chat_message("user"):
+        st.markdown(prompt_input)
 
-    col_info, col_btn = st.columns([2, 1])
-    with col_info:
-        st.caption(f"Caratteri inseriti: {len(voce)} / 10.000")
-    with col_btn:
-        analizza_clicked = st.button("✨ Avvia Analisi AI", type="primary", use_container_width=True)
-
-    if analizza_clicked:
-        if not client:
-            st.error("⚠️ API Key non trovata nei Secrets di Streamlit.")
-        elif voce.strip():
-            prompt = f"""
+    # Prompt di analisi
+    system_prompt = f"""
 Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni ed ingegneria.
 
 Analizza la seguente voce di capitolato:
-{voce}
+{prompt_input}
 
-Fornisci una risposta dettagliata e ben strutturata in Markdown:
-### 1. 🔍 Requisiti e Prestazioni Chiave
-Estrai le specifiche tecniche vincolanti e i parametri prestazionali richiesti.
-
-### 2. ⚠️ Criticità e Vincoli di Gara
-Evidenzia eventuali punti deboli, rischi di non conformità o ambiguità.
-
-### 3. 💡 Proposte di Miglioria Tecnico-Economica
-Proponi almeno 5 soluzioni tecniche per migliorare il punteggio in gara (es. prestazioni, sostenibilità, durabilità, manutenibilità).
-
-### 4. 🌱 Conformità Criteri Ambientali Minimi (CAM)
-Indica i requisiti CAM applicabili a questa tipologia di lavorazione/fornitura.
+Rispondi in modo chiaro e ben strutturato in Markdown:
+### 🔍 Requisiti e Prestazioni Principali
+### ⚠️ Criticità e Vincoli di Gara
+### 💡 Proposte di Miglioria Tecnico-Economica (almeno 5 punti)
+### 🌱 Conformità ai Criteri Ambientali Minimi (CAM)
 """
-            with st.spinner(f"Elaborazione in corso con {modello_selezionato}..."):
+
+    # Risposta AI
+    with st.chat_message("assistant"):
+        if not client:
+            st.error("⚠️ API Key di Groq non trovata nei Secrets di Streamlit.")
+        else:
+            with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
                 try:
                     chat_completion = client.chat.completions.create(
-                        messages=[{"role": "user", "content": prompt}],
+                        messages=[{"role": "user", "content": system_prompt}],
                         model=modello_selezionato,
                         temperature=0.2,
                     )
                     risposta = chat_completion.choices[0].message.content
-
-                    st.success("Analisi completata!")
-                    
-                    st.markdown("---")
-                    st.markdown("### 📊 Risultato dell'Analisi")
                     st.markdown(risposta)
+                    st.session_state.messages.append({"role": "assistant", "content": risposta})
 
                 except Exception as e:
                     st.error(f"Errore durante l'elaborazione API: {e}")
-        else:
-            st.warning("Inserisci una voce di capitolato per avviare l'analisi.")
-
-else:
-    st.info(f"Sezione **{menu}** in fase di sviluppo.")
-
-st.divider()
-st.caption("MigliorIA | Software di supporto tecnico per gare d'appalto")
