@@ -56,7 +56,7 @@ SVG_LOGO_SIDEBAR = (
 )
 
 # ---------------------------------------------------------
-# STILE CSS REPLICATO DAL MOCKUP (STRINGHE SINGOLE SICURE)
+# STILE CSS REPLICATO DAL MOCKUP
 # ---------------------------------------------------------
 CSS_STYLE = (
     "<style>"
@@ -77,64 +77,4 @@ CSS_STYLE = (
     "div.stButton > button { background-color: #2563eb !important; color: #ffffff !important; font-weight: 600 !important; font-size: 13px !important; letter-spacing: 0.5px !important; border-radius: 10px !important; padding: 10px 24px !important; border: none !important; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2) !important; }"
     "div.stButton > button:hover { background-color: #1d4ed8 !important; }"
     ".result-container { background-color: #ffffff; border-radius: 16px; padding: 28px; border: 1px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-top: 20px; margin-bottom: 30px; }"
-    ".info-card { background-color: #ffffff; border-radius: 14px; padding: 20px; border: 1px solid #e5e7eb; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }"
-    ".icon-badge { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; font-size: 18px; }"
-    ".badge-blue { background-color: #eff6ff; color: #2563eb; }"
-    ".badge-green { background-color: #f0fdf4; color: #16a34a; }"
-    ".badge-purple { background-color: #faf5ff; color: #9333ea; }"
-    ".badge-orange { background-color: #fff7ed; color: #ea580c; }"
-    ".info-card h4 { font-size: 15px; font-weight: 700; color: #111827; margin: 0 0 6px 0; }"
-    ".info-card p { font-size: 12px; color: #6b7280; margin: 0 0 16px 0; line-height: 1.4; }"
-    ".card-arrow { font-size: 16px; color: #9ca3af; }"
-    ".footer-container { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }"
-    ".status-dot { height: 8px; width: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; }"
-    "</style>"
-)
-
-st.markdown(CSS_STYLE, unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# SIDEBAR
-# ---------------------------------------------------------
-with st.sidebar:
-    col_logo, col_title = st.columns([1, 4])
-    with col_logo:
-        st.markdown(SVG_LOGO_SIDEBAR, unsafe_allow_html=True)
-    with col_title:
-        st.markdown("<h2 style='margin:0; padding:0; font-size:22px; font-weight:800; color:#ffffff;'>Miglior<span style='color:#3b82f6;'>IA</span></h2>", unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    menu = st.radio(
-        "MENU",
-        [
-            "📄 Analisi capitolato", 
-            "⏱️ Cronologia", 
-            "📁 File salvati", 
-            "⚖️ Confronta le migliorie"
-        ],
-        label_visibility="collapsed"
-    )
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;'>CONFIGURAZIONE ENGINE</p>", unsafe_allow_html=True)
-    
-    modello_selezionato = st.selectbox(
-        "Modello Groq:",
-        options=modelli_disponibili,
-        index=0,
-        label_visibility="collapsed"
-    )
-
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<div style='font-size: 12px; color: #ffffff; opacity: 0.8;'><strong style='color: #ffffff;'>MigliorIA</strong><br>Più valore alle tue gare.</div>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# MAIN CONTENT
-# ---------------------------------------------------------
-if menu == "📄 Analisi capitolato":
-
-    # Header principale
-    st.markdown("<div class='welcome-text'>BENVENUTO SU</div>", unsafe_allow_html=True)
-    st.markdown("<div class='main-title'>Miglior<span>IA</span></div>", unsafe_allow_html=True)
-    st.markdown("<div class='main-subtitle'>L
+    ".info-card { background-color: #ffffff; border-radius: 14px; padding: 20px; border: 1px solid #e5e7eb; height: 100%; display: flex; flex-direction: column; justify-content
