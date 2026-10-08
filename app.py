@@ -110,6 +110,7 @@ if GROQ_API_KEY:
         modelli_disponibili.sort(
             key=lambda x: (
                 "llama-3.3-70b" in x.lower(),
+                "llama-3.1-70b" in x.lower(),
                 "llama-3.1" in x.lower(),
                 "llama" in x.lower()
             ), 
@@ -135,6 +136,52 @@ if "ultimo_risultato" not in st.session_state:
 
 if "ultima_voce" not in st.session_state:
     st.session_state.ultima_voce = ""
+
+# ---------------------------------------------------------
+# SYSTEM PROMPT AVANZATO (NORMATIVA & CAM ITALIA)
+# ---------------------------------------------------------
+SYSTEM_PROMPT_MIGLIORIA = """
+Sei "MigliorIA Engine", il sistema di Intelligenza Artificiale specializzato nell'analisi di capitolati e nella redazione di offerte tecniche per gare d'appalto pubbliche in Italia.
+
+INDIRIZZO NORMATIVO E TECNICO:
+1. NORMATIVA DI RIFERIMENTO: Operi in conformità al Codice dei Contratti Pubblici italiano (D.Lgs. 36/2023), valorizzando il "Principio del Risultato" (Art. 1) e il "Principio di Fiducia" (Art. 2).
+2. CRITERI AMBIENTALI MINIMI (CAM): Ogni proposta deve essere strettamente allineata al D.M. 23 giugno 2022 (CAM Edilizia/Costruzioni e successive integrazioni). Fai riferimenti specifici a:
+   - Materia riciclata o recuperata e contenuto minimo di riciclato.
+   - Disassemblabilità e demolizione selettiva a fine vita.
+   - Prestazioni energetiche dell'involucro e degli impianti (LCC - Life Cycle Costing).
+   - Emissioni indoor (VOC) ed ecocompatibilità dei materiali.
+3. TONO E STILE: Linguaggio tecnico rigido, formale, persuasivo per la commissione giudicatrice. Utilizza terminologia appropriata (es. "variante migliorativa", "prestazioni sopralimite", "riduzione degli impatti di cantiere", "durabilità operativa").
+4. OBIETTIVO STRATEGICO: Massimizzare il punteggio nell'Offerta Economicamente Più Vantaggiosa (OEPV) dimostrando valore aggiunto concreto senza alterare gli elementi essenziali non modificabili del progetto.
+"""
+
+# ---------------------------------------------------------
+# FUNZIONE ESECUZIONE LLM CON FALLBACK
+# ---------------------------------------------------------
+def genera_risposta_llm(messages_list, modello_preferito):
+    # Prova prima con il modello selezionato/più potente
+    try:
+        completion = client.chat.completions.create(
+            messages=messages_list,
+            model=modello_preferito,
+            temperature=0.2,
+            max_tokens=3500
+        )
+        return completion.choices[0].message.content
+    except Exception as primary_error:
+        # Fallback su altri modelli se il primo va in errore
+        for alt_model in modelli_disponibili:
+            if alt_model != modello_preferito:
+                try:
+                    completion = client.chat.completions.create(
+                        messages=messages_list,
+                        model=alt_model,
+                        temperature=0.2,
+                        max_tokens=3500
+                    )
+                    return completion.choices[0].message.content
+                except Exception:
+                    continue
+        raise primary_error
 
 # ---------------------------------------------------------
 # LOGO VETTORIALE SVG (MINIMAL M)
@@ -187,7 +234,7 @@ CSS_STYLE = "".join(css_lines)
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# SCHERMATA LOGIN / REGISTRAZIONE (TOTALE ASSENZA EMOJI)
+# SCHERMATA LOGIN / REGISTRAZIONE
 # ---------------------------------------------------------
 if st.session_state.logged_user is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -220,9 +267,9 @@ if st.session_state.logged_user is None:
             if st.button("CREA NUOVO ACCOUNT", use_container_width=True):
                 if user_reg.strip() and pass_reg:
                     if register_user(user_reg.strip(), pass_reg):
-                        st.success("Account registrato. Ora e possibile effettuare l'accesso.")
+                        st.success("Account registrato. Ora è possibile effettuare l'accesso.")
                     else:
-                        st.error("Username gia in uso. Selezionare un nome alternativo.")
+                        st.error("Username già in uso. Selezionare un nome alternativo.")
                 else:
                     st.warning("Compilare tutti i campi richiesti.")
                     
@@ -260,7 +307,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;'>CONFIGURAZIONE ENGINE</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 11px; font-weight: 700; color: #ffffff; text-transform: uppercase; letter-spacing: 1px;'>ENGINE SELEZIONATO</p>", unsafe_allow_html=True)
     
     modello_selezionato = st.selectbox(
         "Modello Groq:",
@@ -304,32 +351,31 @@ if menu == "Analisi capitolato":
             
             esempi_stile = ""
             if gare_top:
-                esempi_stile = "\n\nIMPORTANTE: Imita lo stile tecnico e vincente delle migliori gare dell'utente:\n"
+                esempi_stile = "\n\nMODELLO DI STILE E STRUTTURA (Dai un'impronta simile a questa nostra gara ad alto punteggio):\n"
                 for g in gare_top[:2]:
-                    esempi_stile += f"--- ESEMPIO GARA VINCENTE (Voto {g['punteggio']}/10) ---\n{g['relazione'][:500]}...\n"
+                    esempi_stile += f"--- ESEMPIO VINCENTE UTENTE (Punteggio {g['punteggio']}/10) ---\n{g['relazione'][:600]}...\n"
 
-            prompt = (
-                "Sei un esperto senior di capitolati tecnici e gare d'appalto nel settore delle costruzioni.\n"
+            user_prompt = (
                 f"{esempi_stile}\n"
-                f"Analizza la seguente voce di capitolato:\n{voce}\n\n"
+                f"Analizza con approccio tecnico avanzato la seguente voce di capitolato:\n{voce}\n\n"
                 "Fornisci una risposta chiara, professionale e ben strutturata in Markdown:\n"
                 "### Requisiti e Prestazioni Principali\n"
-                "### Criticita e Vincoli di Gara\n"
-                "### Proposte di Miglioria Tecnico-Economica (almeno 5 punti)\n"
+                "### Criticita e Vincoli di Gara (con quadro dei rischi)\n"
+                "### Proposte di Miglioria Tecnico-Economica (almeno 5 punti operativi)\n"
                 "### Prodotti e Soluzioni Consigliate\n"
                 "Proponi 3-4 marche/prodotti reali. IMPORTANTE: Trasforma il NOME di ciascun prodotto direttamente in un link di ricerca Google ordinario.\n"
                 "Esempio formato: - **[Nome Prodotto / Brand](https://www.google.com/search?q=Nome+Prodotto+scheda+tecnica)**: descrizione breve.\n"
-                "### Conformita CAM (Criteri Ambientali Minimi)"
+                "### Conformita CAM (Criteri Ambientali Minimi D.M. 23/06/2022)"
             )
-            with st.spinner(f"Analisi in corso con {modello_selezionato}..."):
+
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT_MIGLIORIA},
+                {"role": "user", "content": user_prompt}
+            ]
+
+            with st.spinner(f"Elaborazione ad alte prestazioni in corso con {modello_selezionato}..."):
                 try:
-                    chat_completion = client.chat.completions.create(
-                        messages=[{"role": "user", "content": prompt}],
-                        model=modello_selezionato,
-                        temperature=0.2,
-                        max_tokens=3000
-                    )
-                    risultato = chat_completion.choices[0].message.content
+                    risultato = genera_risposta_llm(messages, modello_selezionato)
                     
                     st.session_state.ultimo_risultato = risultato
                     st.session_state.ultima_voce = voce
@@ -354,7 +400,6 @@ if menu == "Analisi capitolato":
 
     st.write("")
 
-    # SVG PICCOLI E PROFESSIONALI SULLE CARDS IN BASSO
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown("""
@@ -501,32 +546,28 @@ elif menu == "Stima Punteggio Gara":
         
         if st.button("CALCOLA STIMA PUNTEGGIO"):
             if miglioria_input.strip():
-                prompt_stima = f"""
-Sei un Commissario di Gara senior esperto nella valutazione di Offerte Tecniche.
-
+                user_prompt_stima = f"""
 Miglioria Proposta:
 {miglioria_input}
 
 Criteri di Gara / Disciplinare:
 {criteri_input if criteri_input else 'Criteri standard di valutazione dell offerta economicamente piu vantaggiosa.'}
 
-Fornisci un report strutturato in Markdown:
+Fornisci un report giudizioso in Markdown:
 ### Stima Punteggio Ipotetico (es. 8.5/10)
-### Punti di Forza (perche la commissione assegnera punti)
+### Punti di Forza (elementi di premialita per la commissione)
 ### Punti Deboli o Rischi di Contesto
 ### Consigli di Redazione per Massimizzare il Punteggio
 """
+                messages_stima = [
+                    {"role": "system", "content": SYSTEM_PROMPT_MIGLIORIA},
+                    {"role": "user", "content": user_prompt_stima}
+                ]
                 with st.spinner("Valutazione in corso con l AI..."):
                     try:
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "user", "content": prompt_stima}],
-                            model=modello_selezionato,
-                            temperature=0.2,
-                            max_tokens=2000
-                        )
-                        st.session_state.risultato_punteggio = chat_completion.choices[0].message.content
+                        st.session_state.risultato_punteggio = genera_risposta_llm(messages_stima, modello_selezionato)
                     except Exception as e:
-                        st.error(f"Errore durante l elaborazione: {e}")
+                        st.error(f"Errore durante l'elaborazione: {e}")
             else:
                 st.warning("Inserisci la descrizione della miglioria prima di procedere.")
 
